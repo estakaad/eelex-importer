@@ -48,6 +48,14 @@ def parse_notes(A):
             "sourceLinks": []
         })
 
+    author = A.find(".//x:T", namespaces={"x": "http://www.eki.ee/dict/teo"})
+    notes_list.append({
+        "value": author.text,
+        "lang": "est",
+        "publicity": False,
+        "sourceLinks": []
+    })
+
     return notes_list
 
 
@@ -90,13 +98,13 @@ def parse_words(P, A):
     for terg in P.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
         tall = terg.find(".//x:tall", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        etym = terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         lexemeValueStateCode = ter.attrib.get('{http://www.eki.ee/dict/teo}tyyp', '')
         if lexemeValueStateCode == 'ee':
             lexemeValueStateCode = 'eelistermin'
         else:
             lexemeValueStateCode = None
-
 
         sourceLinks = []
         if tall is not None:
@@ -109,7 +117,7 @@ def parse_words(P, A):
 
         words.append({
             "value": ter.text,
-            "lang": "est",
+            "lang": etym.text if etym is not None else None,
             "lexemeValueStateCode": [lexemeValueStateCode] if lexemeValueStateCode else None,
             "sourceLinks": sourceLinks
         })
@@ -126,11 +134,33 @@ def parse_words(P, A):
 
     return words
 
+
 def parse_concept_ids(A):
     c_id = A.find(".//x:G", namespaces={"x": "http://www.eki.ee/dict/teo"})
     c_ids = []
     c_ids.append(c_id.text)
     return c_ids
+
+
+def parse_forums(A):
+    forums = []
+    for komg in A.findall(".//x:komg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        kom_element = komg.find(".//x:kom", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        kaut_element = komg.find(".//x:kaut", namespaces={"x": "http://www.eki.ee/dict/teo"})
+
+        forum_value = ""
+
+        if kom_element is not None:
+            forum_value += kom_element.text
+
+        if kaut_element is not None:
+            forum_value += " - " + kaut_element.text
+
+        if forum_value:
+            forums.append({"value": forum_value})
+
+    return forums
+
 
 def parse_entry(A):
     entry = {}
@@ -141,6 +171,8 @@ def parse_entry(A):
     entry["notes"] = parse_notes(A)
 
     entry["usages"] = parse_usage(A)
+
+    entry["forums"] = parse_forums(A)
 
     # Parse P element for words
     P = A.find(".//x:P", namespaces={"x": "http://www.eki.ee/dict/teo"})
