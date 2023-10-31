@@ -2,6 +2,8 @@ from xml.dom.minidom import parse
 import xml.etree.ElementTree as ET
 import json
 
+import helpers
+
 
 def parse_domains(A):
     domains = A.findall(".//x:v", namespaces={"x": "http://www.eki.ee/dict/teo"})
@@ -79,7 +81,7 @@ def parse_notes(A):
     author = A.find(".//x:T", namespaces={"x": "http://www.eki.ee/dict/teo"})
     if author is not None:
         notes_list.append({
-            "value": author.text,
+            "value": "Artikli toimetaja: " + author.text,
             "lang": "est",
             "publicity": False,
             "sourceLinks": []
@@ -128,104 +130,116 @@ def parse_usage(A):
 
     return usages
 
-
 def parse_words(P, A):
     words = []
+    processed_words = set()
 
     for terg in P.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        print(ET.tostring(terg))
+
         ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        lyh = terg.find(".//x:lyh", namespaces={"x": "http://www.eki.ee/dict/teo"})
         tall = terg.find(".//x:tall", namespaces={"x": "http://www.eki.ee/dict/teo"})
         etym = terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        x_s = terg.find(".//x:s", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         liik_value = ter.attrib.get('{http://www.eki.ee/dict/teo}liik', None)
 
         if etym:
-            lang = etym.text
+            print(etym.text)
+            print(helpers.match_language(etym.text))
+            lang = helpers.match_language(etym.text)
+            print(lang)
         elif liik_value == 'z':
             lang = 'lad'
         else:
             lang = 'est'
 
-        lexemeValueStateCode = ter.attrib.get('{http://www.eki.ee/dict/teo}tyyp', '')
-        if lexemeValueStateCode == 'ee':
-            lexemeValueStateCode = 'eelistermin'
-        else:
-            lexemeValueStateCode = None
+        word_key = (ter.text, lang)
+        if word_key in processed_words:
+            continue
+        processed_words.add(word_key)
+
+        lexemeValueStateCode = 'eelistatud' if ter.attrib.get('{http://www.eki.ee/dict/teo}tyyp', '') == 'ee' else None
 
         sourceLinks = []
         if tall is not None:
-            sourceLinks.append(
-                {
-                    "sourceId": get_source_id(tall.text),
-                    "value": tall.text,
-                    "name": None
-                })
+            sourceLinks.append({
+                "sourceId": get_source_id(tall.text),
+                "value": tall.text,
+                "name": None
+            })
 
+        lexemeNotes = []
+        if x_s is not None:
+            lexemeNotes.append({"value": x_s.text, "lang": lang, "publicity": True if is_concept_public(A) else False})  # New
+
+        if lyh is not None:
+            word_key = (lyh.text, 'est')
+            if word_key not in processed_words:
+                processed_words.add(word_key)
+                words.append({
+                    "value": lyh.text,
+                    "lang": 'est',
+                    "wordTypeCodes": ["lühend"],
+                    "lexemePublicity": True if is_concept_public(A) else False,
+                    "sourceLinks": [],
+                    "lexemeNotes": None
+                })
+        print(ter.text)
+        print(lang)
         words.append({
             "value": ter.text,
             "lang": lang,
             "lexemeValueStateCode": [lexemeValueStateCode] if lexemeValueStateCode else None,
             "lexemePublicity": True if is_concept_public(A) else False,
-            "sourceLinks": sourceLinks
+            "sourceLinks": sourceLinks,
+            "lexemeNotes": lexemeNotes if lexemeNotes else None  # New
         })
-
-        # Handle the x:lyh element
-        for lyh in terg.findall(".//x:lyh", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-            words.append({
-                "value": lyh.text,
-                "lang": None,
-                "wordTypeCodes": ["lyhend"],
-                "lexemePublicity": True if is_concept_public(A) else False,
-                "sourceLinks": []
-            })
-
-    for xp in A.findall(".//x:xp", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-        lang = xp.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', '')
-        for x in xp.findall(".//x:x", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-            words.append({
-                "value": x.text,
-                "lang": lang,
-                "lexemePublicity": True if is_concept_public(A) else False,
-                "wordTypeCodes": [],
-                "sourceLinks": []
-            })
-
-        # Handle the x:xlyh element
-        for xlyh in xp.findall(".//x:xlyh", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-            words.append({
-                "value": xlyh.text,
-                "lang": lang,
-                "lexemePublicity": True if is_concept_public(A) else False,
-                "wordTypeCodes": ["lühend"],
-                "sourceLinks": []
-            })
 
     for xp in A.findall(".//x:xp", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         lang = xp.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', '')
         for xg in xp.findall(".//x:xg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
             x = xg.find(".//x:x", namespaces={"x": "http://www.eki.ee/dict/teo"})
+            xlyh = xg.find(".//x:xlyh", namespaces={"x": "http://www.eki.ee/dict/teo"})  # New
+
+            lexemeNotes = []
+            xgrg = xg.find(".//x:xgrg", namespaces={"x": "http://www.eki.ee/dict/teo"})
+            if xgrg is not None:
+                for child in xgrg:
+                    if child.text:
+                        note = {
+                            "value": child.text,
+                            "lang": lang,
+                            "publicity": True if is_concept_public(A) else False,
+                        }
+                        lexemeNotes.append(note)
+
             if x is not None:
-                lexemeNotes = []
+                word_key = (x.text, lang)
+                if word_key not in processed_words:
+                    processed_words.add(word_key)
+                    words.append({
+                        "value": x.text,
+                        "lang": lang,
+                        "wordTypeCodes": [],
+                        "lexemePublicity": True if is_concept_public(A) else False,
+                        "sourceLinks": [],
+                        "lexemeNotes": lexemeNotes if lexemeNotes else None
+                    })
 
-                xgrg = xg.find(".//x:xgrg", namespaces={"x": "http://www.eki.ee/dict/teo"})
-                if xgrg is not None:
-                    for child in xgrg:
-                        if child.text:
-                            note = {
-                                "value": child.text,
-                                "lang": lang,
-                                "publicity": True if is_concept_public(A) else False,
-                            }
-                            lexemeNotes.append(note)
-
-                words.append({
-                    "value": x.text,
-                    "lang": lang,
-                    "wordTypeCodes": [],
-                    "lexemePublicity": True if is_concept_public(A) else False,
-                    "sourceLinks": [],
-                    "lexemeNotes": lexemeNotes if lexemeNotes else None
-                })
+            if xlyh is not None:
+                word_key = (xlyh.text, lang)
+                if word_key not in processed_words:
+                    processed_words.add(word_key)
+                    words.append({
+                        "value": xlyh.text,
+                        "lang": lang,
+                        "wordTypeCodes": ["lühend"],
+                        "lexemePublicity": True if is_concept_public(A) else False,
+                        "sourceLinks": [],
+                        "lexemeNotes": None
+                    })
 
     return words
 
@@ -259,7 +273,6 @@ def parse_forums(A):
 
 def parse_entry(A, dataset_code):
     if '{http://www.eki.ee/dict/teo}as' in A.attrib and A.attrib['{http://www.eki.ee/dict/teo}as'] == 'elx':
-        print("test")
         return None
 
     entry = {}
@@ -282,7 +295,7 @@ def parse_entry(A, dataset_code):
     if P is not None:
         entry["words"] = parse_words(P, A)
 
-    entry["conceptIds"] = parse_concept_ids(A)
+    #entry["conceptIds"] = parse_concept_ids(A)
 
     return entry
 
