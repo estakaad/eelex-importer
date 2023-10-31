@@ -16,10 +16,10 @@ def parse_notes(A):
 
     for dg in A.findall(".//x:dg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         lisa = dg.find(".//x:lisa", namespaces={"x": "http://www.eki.ee/dict/teo"})
-        all_elements = dg.findall(".//x:all", namespaces={"x": "http://www.eki.ee/dict/teo"})  # Modified this line
+        all_elements = dg.findall(".//x:all", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         sourceLinks = []
-        for all_element in all_elements:  # Loop through all the sources
+        for all_element in all_elements:
             if all_element is not None:
                 sourceLinks.append(
                     {
@@ -34,11 +34,10 @@ def parse_notes(A):
                 "value": lisa.text,
                 "lang": "est",
                 "publicity": True,
-                "sourceLinks": sourceLinks  # this will now include all sources
+                "sourceLinks": sourceLinks
             })
 
 
-        # Collecting values from children of x:etgg
         for terg in A.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
             for etgg in terg.findall(".//x:etgg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
                 values = []
@@ -46,15 +45,12 @@ def parse_notes(A):
                     if child.text:
                         values.append(child.text)
                 if values:
-                    # Concatenate values with semicolon
                     concatenated_values = '; '.join(values)
 
-                    # Get the value of x:ter for this note
                     ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
                     if ter is not None:
                         concatenated_values = f"{ter.text} - {concatenated_values}"
 
-                    # Append the note
                     notes_list.append({
                         "value": concatenated_values,
                         "lang": "est",
@@ -131,7 +127,14 @@ def parse_words(P, A):
         tall = terg.find(".//x:tall", namespaces={"x": "http://www.eki.ee/dict/teo"})
         etym = terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
-        lang = etym.text if etym is not None else None
+        liik_value = ter.attrib.get('{http://www.eki.ee/dict/teo}liik', None)
+
+        if etym:
+            lang = etym.text
+        elif liik_value == 'z':
+            lang = 'lad'
+        else:
+            lang = 'est'
 
         lexemeValueStateCode = ter.attrib.get('{http://www.eki.ee/dict/teo}tyyp', '')
         if lexemeValueStateCode == 'ee':
@@ -211,10 +214,6 @@ def parse_words(P, A):
 
     return words
 
-    return words
-
-
-
 
 def parse_concept_ids(A):
     c_id = A.find(".//x:G", namespaces={"x": "http://www.eki.ee/dict/teo"})
@@ -255,12 +254,10 @@ def parse_entry(A):
 
     entry["forums"] = parse_forums(A)
 
-    # Parse P element for words
     P = A.find(".//x:P", namespaces={"x": "http://www.eki.ee/dict/teo"})
     if P is not None:
         entry["words"] = parse_words(P, A)
 
-    # Parse S element for definitions
     S = A.find(".//x:S", namespaces={"x": "http://www.eki.ee/dict/teo"})
     if S is not None:
         entry["definitions"] = parse_definitions(S)
