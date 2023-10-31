@@ -29,6 +29,7 @@ def parse_notes(A):
                 })
 
         sourceLinks = []
+
         for all_element in all_elements:
             if all_element is not None:
                 sourceLinks.append(
@@ -48,35 +49,34 @@ def parse_notes(A):
             })
 
 
+    for terg in A.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        for etgg in terg.findall(".//x:etgg", namespaces=   {"x": "http://www.eki.ee/dict/teo"}):
+            values = []
+            for child in etgg:
+                if child.text:
+                    values.append(child.text)
+            if values:
+                concatenated_values = '; '.join(values)
 
-        for terg in A.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-            for etgg in terg.findall(".//x:etgg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-                values = []
-                for child in etgg:
-                    if child.text:
-                        values.append(child.text)
-                if values:
-                    concatenated_values = '; '.join(values)
+                ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
+                if ter is not None:
+                    concatenated_values = f"{ter.text} - {concatenated_values}"
 
-                    ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
-                    if ter is not None:
-                        concatenated_values = f"{ter.text} - {concatenated_values}"
+                notes_list.append({
+                    "value": concatenated_values,
+                    "lang": "est",
+                    "publicity": True if is_concept_public(A) else False,
+                    "sourceLinks": []
+                })
 
-                    notes_list.append({
-                        "value": concatenated_values,
-                        "lang": "est",
-                        "publicity": True if is_concept_public(A) else False,
-                        "sourceLinks": []
-                    })
-
-    confession = A.findall(".//x:konf", namespaces={"x": "http://www.eki.ee/dict/teo"})
-    for c in confession:
-        notes_list.append({
-            "value": c.text,
-            "lang": "est",
-            "publicity": True if is_concept_public(A) else False,
-            "sourceLinks": []
-        })
+    # confession = A.findall(".//x:konf", namespaces={"x": "http://www.eki.ee/dict/teo"})
+    # for c in confession:
+    #     notes_list.append({
+    #         "value": c.text,
+    #         "lang": "est",
+    #         "publicity": True if is_concept_public(A) else False,
+    #         "sourceLinks": []
+    #     })
 
     author = A.find(".//x:T", namespaces={"x": "http://www.eki.ee/dict/teo"})
     if author is not None:
@@ -107,7 +107,9 @@ def parse_definitions(S):
 def parse_usage(A):
     usages = []
     for ng in A.findall(".//x:ng", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        # Kasutusnäide
         n_element = ng.find(".//x:n", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Kasutusnäite allikas
         nall_element = ng.find(".//x:nall", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         sourceLinks = []
@@ -130,26 +132,36 @@ def parse_usage(A):
 
     return usages
 
-def parse_words(P, A):
+
+def parse_words(A):
     words = []
     processed_words = set()
 
-    for terg in P.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-        print(ET.tostring(terg))
+    # Derive P from A
+    P = A.find(".//x:P", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
+    # Check if P exists
+    if P is None:
+        return words
+
+    for terg in P.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        #print(ET.tostring(terg))
+
+        # Termin
         ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Lühend
         lyh = terg.find(".//x:lyh", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Termini allikaviide
         tall = terg.find(".//x:tall", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Termini keel
         etym = terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Stiil
         x_s = terg.find(".//x:s", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         liik_value = ter.attrib.get('{http://www.eki.ee/dict/teo}liik', None)
 
         if etym:
-            print(etym.text)
-            print(helpers.match_language(etym.text))
             lang = helpers.match_language(etym.text)
-            print(lang)
         elif liik_value == 'z':
             lang = 'lad'
         else:
@@ -186,8 +198,7 @@ def parse_words(P, A):
                     "sourceLinks": [],
                     "lexemeNotes": None
                 })
-        print(ter.text)
-        print(lang)
+
         words.append({
             "value": ter.text,
             "lang": lang,
@@ -254,7 +265,9 @@ def parse_concept_ids(A):
 def parse_forums(A):
     forums = []
     for komg in A.findall(".//x:komg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        # Kommentaari (sisemärkuse) sisu
         kom_element = komg.find(".//x:kom", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        # Kommentaari (sisemärkuse) autor
         kaut_element = komg.find(".//x:kaut", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
         forum_value = ""
@@ -293,7 +306,7 @@ def parse_entry(A, dataset_code):
 
     P = A.find(".//x:P", namespaces={"x": "http://www.eki.ee/dict/teo"})
     if P is not None:
-        entry["words"] = parse_words(P, A)
+        entry["words"] = parse_words(A)
 
     #entry["conceptIds"] = parse_concept_ids(A)
 
@@ -343,8 +356,8 @@ def get_source_id(source_name):
 
     source_id = source_dict.get(source_name, None)
 
-    if source_id is None:
-        print(f"Source name not found: {source_name}")
+    # if source_id is None:
+    #     print(f"Source name not found: {source_name}")
 
     return source_id
 
