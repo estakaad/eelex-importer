@@ -16,19 +16,51 @@ def parse_notes(A):
 
     for dg in A.findall(".//x:dg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         lisa = dg.find(".//x:lisa", namespaces={"x": "http://www.eki.ee/dict/teo"})
-        all_element = dg.find(".//x:all", namespaces={"x": "http://www.eki.ee/dict/teo"})
+        all_elements = dg.findall(".//x:all", namespaces={"x": "http://www.eki.ee/dict/teo"})  # Modified this line
 
         sourceLinks = []
-        if all_element is not None:
-            sourceLinks.append({"value": all_element.text, "name": ""})
+        for all_element in all_elements:  # Loop through all the sources
+            if all_element is not None:
+                sourceLinks.append(
+                    {
+                        "sourceId": get_source_id(all_element.text),
+                        "value": all_element.text,
+                        "name": ""
+                    }
+                )
 
         if lisa is not None and lisa.text:
             notes_list.append({
                 "value": lisa.text,
                 "lang": "est",
                 "publicity": True,
-                "sourceLinks": sourceLinks
+                "sourceLinks": sourceLinks  # this will now include all sources
             })
+
+
+        # Collecting values from children of x:etgg
+        for terg in A.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+            for etgg in terg.findall(".//x:etgg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+                values = []
+                for child in etgg:
+                    if child.text:
+                        values.append(child.text)
+                if values:
+                    # Concatenate values with semicolon
+                    concatenated_values = '; '.join(values)
+
+                    # Get the value of x:ter for this note
+                    ter = terg.find(".//x:ter", namespaces={"x": "http://www.eki.ee/dict/teo"})
+                    if ter is not None:
+                        concatenated_values = f"{ter.text} - {concatenated_values}"
+
+                    # Append the note
+                    notes_list.append({
+                        "value": concatenated_values,
+                        "lang": "est",
+                        "publicity": True,
+                        "sourceLinks": []
+                    })
 
     confession = A.findall(".//x:konf", namespaces={"x": "http://www.eki.ee/dict/teo"})
     for c in confession:
@@ -40,14 +72,16 @@ def parse_notes(A):
         })
 
     author = A.find(".//x:T", namespaces={"x": "http://www.eki.ee/dict/teo"})
-    notes_list.append({
-        "value": author.text,
-        "lang": "est",
-        "publicity": False,
-        "sourceLinks": []
-    })
+    if author is not None:
+        notes_list.append({
+            "value": author.text,
+            "lang": "est",
+            "publicity": False,
+            "sourceLinks": []
+        })
 
     return notes_list
+
 
 
 def parse_definitions(S):
@@ -71,7 +105,13 @@ def parse_usage(S):
 
         sourceLinks = []
         if nall_element is not None:
-            sourceLinks.append({"value": nall_element.text, "name": ""})
+            sourceLinks.append(
+                {
+                    "sourceId": get_source_id(nall_element.text),
+                    "value": nall_element.text,
+                    "name": ""
+                }
+            )
 
         if n_element is not None:
             usages.append({
@@ -91,6 +131,8 @@ def parse_words(P, A):
         tall = terg.find(".//x:tall", namespaces={"x": "http://www.eki.ee/dict/teo"})
         etym = terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
+        lang = etym.text if etym is not None else None
+
         lexemeValueStateCode = ter.attrib.get('{http://www.eki.ee/dict/teo}tyyp', '')
         if lexemeValueStateCode == 'ee':
             lexemeValueStateCode = 'eelistermin'
@@ -101,17 +143,26 @@ def parse_words(P, A):
         if tall is not None:
             sourceLinks.append(
                 {
-                    "sourceId": None,
+                    "sourceId": get_source_id(tall.text),
                     "value": tall.text,
                     "name": None
                 })
 
         words.append({
             "value": ter.text,
-            "lang": etym.text if etym is not None else None,
+            "lang": lang,
             "lexemeValueStateCode": [lexemeValueStateCode] if lexemeValueStateCode else None,
             "sourceLinks": sourceLinks
         })
+
+        # Handle the x:lyh element
+        for lyh in terg.findall(".//x:lyh", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+            words.append({
+                "value": lyh.text,
+                "lang": None,
+                "wordTypeCodes": ["lyhend"],
+                "sourceLinks": []
+            })
 
     for xp in A.findall(".//x:xp", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         lang = xp.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', '')
@@ -123,7 +174,46 @@ def parse_words(P, A):
                 "sourceLinks": []
             })
 
+        # Handle the x:xlyh element
+        for xlyh in xp.findall(".//x:xlyh", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+            words.append({
+                "value": xlyh.text,
+                "lang": lang,
+                "wordTypeCodes": ["lühend"],
+                "sourceLinks": []
+            })
+
+    for xp in A.findall(".//x:xp", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+        lang = xp.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', '')
+        for xg in xp.findall(".//x:xg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+            x = xg.find(".//x:x", namespaces={"x": "http://www.eki.ee/dict/teo"})
+            if x is not None:
+                lexemeNotes = []
+
+                xgrg = xg.find(".//x:xgrg", namespaces={"x": "http://www.eki.ee/dict/teo"})
+                if xgrg is not None:
+                    for child in xgrg:
+                        if child.text:
+                            note = {
+                                "value": child.text,
+                                "lang": lang,
+                                "publicity": True
+                            }
+                            lexemeNotes.append(note)
+
+                words.append({
+                    "value": x.text,
+                    "lang": lang,
+                    "wordTypeCodes": [],
+                    "sourceLinks": [],
+                    "lexemeNotes": lexemeNotes if lexemeNotes else None
+                })
+
     return words
+
+    return words
+
+
 
 
 def parse_concept_ids(A):
@@ -193,3 +283,36 @@ def parse_xml(input_filename, output_filename):
 
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(json_output)
+
+
+def get_source_id(source_name):
+    source_dict = {
+        "Salumaa 2008": 22637,
+        "EVÕSS": 16733,
+        "Wikipedia": 19621,
+        "Britannica": 19250,
+        "EKRL": 16734,
+        "SPL": 16679,
+        "VL": 22967,
+        "Salo 2000": 22611,
+        "TEA": 22698,
+        "HarperCollins": 22622,
+        "LThK 1993": 22663,
+        "New Advent": 22621,
+        "EKSS": 0,
+        "ПЭ": 22973,
+        "ÕS 2018": 0,
+        "EncChr": 22918,
+        "Riistan 2011": 22969,
+        "Blackwell": 22970,
+        "Day": 22971,
+        "BibleGateway": 22972,
+        "BERTA": 19301
+    }
+
+    source_id = source_dict.get(source_name, None)
+
+    if source_id is None:
+        print(f"Source name not found: {source_name}")
+
+    return source_id
