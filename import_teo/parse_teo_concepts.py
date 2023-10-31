@@ -2,15 +2,6 @@ from xml.dom.minidom import parse
 import xml.etree.ElementTree as ET
 import json
 
-def beautify_xml(file_path, prettified_file):
-
-    dom = parse(file_path)
-
-    pretty_xml_str = dom.toprettyxml(indent="  ")
-
-    with open(prettified_file, 'w', encoding='utf-8') as f:
-        f.write(pretty_xml_str)
-
 
 def parse_domains(A):
     domains = A.findall(".//x:v", namespaces={"x": "http://www.eki.ee/dict/teo"})
