@@ -18,6 +18,14 @@ def parse_notes(A):
         lisa = dg.find(".//x:lisa", namespaces={"x": "http://www.eki.ee/dict/teo"})
         all_elements = dg.findall(".//x:all", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
+        for evt in A.findall(".//x:evt", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+            if evt.text:
+                notes_list.append({
+                    "value": "Vt ka: " + evt.text,
+                    "lang": "est",
+                    "publicity": True
+                })
+
         sourceLinks = []
         for all_element in all_elements:
             if all_element is not None:
@@ -36,6 +44,7 @@ def parse_notes(A):
                 "publicity": True,
                 "sourceLinks": sourceLinks
             })
+
 
 
         for terg in A.findall(".//x:terg", namespaces={"x": "http://www.eki.ee/dict/teo"}):
@@ -242,11 +251,20 @@ def parse_forums(A):
     return forums
 
 
-def parse_entry(A):
+def parse_entry(A, dataset_code):
+    if '{http://www.eki.ee/dict/teo}as' in A.attrib and A.attrib['{http://www.eki.ee/dict/teo}as'] == 'elx':
+        print("test")
+        return None
+
     entry = {}
 
+    entry["datasetCode"] = dataset_code
     # Parse domains
     entry["domains"] = parse_domains(A)
+
+    S = A.find(".//x:S", namespaces={"x": "http://www.eki.ee/dict/teo"})
+    if S is not None:
+        entry["definitions"] = parse_definitions(S)
 
     entry["notes"] = parse_notes(A)
 
@@ -258,23 +276,20 @@ def parse_entry(A):
     if P is not None:
         entry["words"] = parse_words(P, A)
 
-    S = A.find(".//x:S", namespaces={"x": "http://www.eki.ee/dict/teo"})
-    if S is not None:
-        entry["definitions"] = parse_definitions(S)
-
     entry["conceptIds"] = parse_concept_ids(A)
 
     return entry
 
-def parse_xml(input_filename, output_filename):
+def parse_xml(input_filename, output_filename, dataset_code):
     tree = ET.parse(input_filename)
     root = tree.getroot()
 
     entries = []
 
     for A in root.findall(".//x:A", namespaces={"x": "http://www.eki.ee/dict/teo"}):
-        entry = parse_entry(A)
-        entries.append(entry)
+        entry = parse_entry(A, dataset_code)
+        if entry:
+            entries.append(entry)
 
     json_output = json.dumps(entries, indent=4, ensure_ascii=False)
 
