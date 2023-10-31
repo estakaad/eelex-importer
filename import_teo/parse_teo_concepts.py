@@ -23,7 +23,7 @@ def parse_notes(A):
                 notes_list.append({
                     "value": "Vt ka: " + evt.text,
                     "lang": "est",
-                    "publicity": True
+                    "publicity": True if is_concept_public(A) else False
                 })
 
         sourceLinks = []
@@ -41,7 +41,7 @@ def parse_notes(A):
             notes_list.append({
                 "value": lisa.text,
                 "lang": "est",
-                "publicity": True,
+                "publicity": True if is_concept_public(A) else False,
                 "sourceLinks": sourceLinks
             })
 
@@ -63,7 +63,7 @@ def parse_notes(A):
                     notes_list.append({
                         "value": concatenated_values,
                         "lang": "est",
-                        "publicity": True,
+                        "publicity": True if is_concept_public(A) else False,
                         "sourceLinks": []
                     })
 
@@ -72,7 +72,7 @@ def parse_notes(A):
         notes_list.append({
             "value": c.text,
             "lang": "est",
-            "publicity": True,
+            "publicity": True if is_concept_public(A) else False,
             "sourceLinks": []
         })
 
@@ -102,9 +102,9 @@ def parse_definitions(S):
     return definitions
 
 
-def parse_usage(S):
+def parse_usage(A):
     usages = []
-    for ng in S.findall(".//x:ng", namespaces={"x": "http://www.eki.ee/dict/teo"}):
+    for ng in A.findall(".//x:ng", namespaces={"x": "http://www.eki.ee/dict/teo"}):
         n_element = ng.find(".//x:n", namespaces={"x": "http://www.eki.ee/dict/teo"})
         nall_element = ng.find(".//x:nall", namespaces={"x": "http://www.eki.ee/dict/teo"})
 
@@ -122,6 +122,7 @@ def parse_usage(S):
             usages.append({
                 "value": n_element.text,
                 "lang": "est",
+                "publicity": True if is_concept_public(A) else False,
                 "sourceLinks": sourceLinks
             })
 
@@ -164,6 +165,7 @@ def parse_words(P, A):
             "value": ter.text,
             "lang": lang,
             "lexemeValueStateCode": [lexemeValueStateCode] if lexemeValueStateCode else None,
+            "lexemePublicity": True if is_concept_public(A) else False,
             "sourceLinks": sourceLinks
         })
 
@@ -173,6 +175,7 @@ def parse_words(P, A):
                 "value": lyh.text,
                 "lang": None,
                 "wordTypeCodes": ["lyhend"],
+                "lexemePublicity": True if is_concept_public(A) else False,
                 "sourceLinks": []
             })
 
@@ -182,6 +185,7 @@ def parse_words(P, A):
             words.append({
                 "value": x.text,
                 "lang": lang,
+                "lexemePublicity": True if is_concept_public(A) else False,
                 "wordTypeCodes": [],
                 "sourceLinks": []
             })
@@ -191,6 +195,7 @@ def parse_words(P, A):
             words.append({
                 "value": xlyh.text,
                 "lang": lang,
+                "lexemePublicity": True if is_concept_public(A) else False,
                 "wordTypeCodes": ["lühend"],
                 "sourceLinks": []
             })
@@ -209,7 +214,7 @@ def parse_words(P, A):
                             note = {
                                 "value": child.text,
                                 "lang": lang,
-                                "publicity": True
+                                "publicity": True if is_concept_public(A) else False,
                             }
                             lexemeNotes.append(note)
 
@@ -217,6 +222,7 @@ def parse_words(P, A):
                     "value": x.text,
                     "lang": lang,
                     "wordTypeCodes": [],
+                    "lexemePublicity": True if is_concept_public(A) else False,
                     "sourceLinks": [],
                     "lexemeNotes": lexemeNotes if lexemeNotes else None
                 })
@@ -259,7 +265,7 @@ def parse_entry(A, dataset_code):
     entry = {}
 
     entry["datasetCode"] = dataset_code
-    # Parse domains
+
     entry["domains"] = parse_domains(A)
 
     S = A.find(".//x:S", namespaces={"x": "http://www.eki.ee/dict/teo"})
@@ -328,3 +334,11 @@ def get_source_id(source_name):
         print(f"Source name not found: {source_name}")
 
     return source_id
+
+
+def is_concept_public(A):
+    TL = A.find(".//x:TL", namespaces={"x": "http://www.eki.ee/dict/teo"})
+    if TL is not None and TL.text:
+        return True
+    else:
+        return False
