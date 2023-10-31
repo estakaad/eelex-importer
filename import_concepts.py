@@ -140,11 +140,11 @@ def update_word_ids(filename, source_of_truth_dataset, concepts_dataset):
                 logger.info(f'Word {word} has does not have lexemes in ÜS (Case 2)')
 
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    words_without_id_file = f'files/{timestamp}_words_without_id.json'
-    words_with_more_than_one_id_file = f'files/{timestamp}_words_with_more_than_one_id.json'
+    words_without_id_file = f'{timestamp}_words_without_id.json'
+    words_with_more_than_one_id_file = f'{timestamp}_words_with_more_than_one_id.json'
 
 
-    with open(f'files/{concepts_dataset}_concepts_with_word_ids.json', 'w', encoding='utf-8') as file:
+    with open(f'{concepts_dataset}_concepts_with_word_ids.json', 'w', encoding='utf-8') as file:
         json.dump(concepts, file, indent=4, ensure_ascii=False)
 
     with open(words_without_id_file, 'w', encoding='utf-8') as f:
