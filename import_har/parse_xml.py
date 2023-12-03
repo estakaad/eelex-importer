@@ -30,8 +30,14 @@ def parse_xml(file_path):
 
         # Valdkonnad
         for v_element in a_element.findall('.//h:v', ns):
-            d_value = v_element.text
-            domains.append(d_value)
+            #d_domain = v_element.text
+            d_domain = 'ED1'
+            d_origin = 'lenoch'
+            domain = {
+                'code': d_domain,
+                'origin': d_origin
+            }
+            domains.append(domain)
 
         # GUID
         for guid in a_element.findall('.//h:G', ns):
@@ -40,6 +46,9 @@ def parse_xml(file_path):
         # Koostamisaeg - createdAt
         for created_at in a_element.findall('.//h:KA', ns):
             firstCreateEventOn = created_at.text
+            date_part = firstCreateEventOn.split("T")[0]
+            parts = date_part.split("-")
+            firstCreateEventOn = f"{parts[2]}.{parts[1]}.{parts[0]}"
 
         # Koostaja - creator
         for creator in a_element.findall('.//h:K', ns):
@@ -48,6 +57,9 @@ def parse_xml(file_path):
         # Viimase muutmise aeg -
         for last_edit in a_element.findall('.//h:TA', ns):
             manualEventOn = last_edit.text
+            date_part = manualEventOn.split("T")[0]
+            parts = date_part.split("-")
+            manualEventOn = f"{parts[2]}.{parts[1]}.{parts[0]}"
 
         # Viimane muutja
         for editor in a_element.findall('.//h:T', ns):
@@ -87,7 +99,7 @@ def parse_xml(file_path):
 
         # Koosta mõiste objekt
         concept = data_classes.Concept(
-            datasetCode='har-02-12',
+            datasetCode='har-03-12',
             conceptIds=conceptids,
             domains=domains,
             manualEventOn=manualEventOn,
@@ -210,12 +222,13 @@ def tg_def_definition(tg_element):
             sourceLinks=sourcelinks)
 
     return definition, notes, forums
+
 # Vastete plokk
 def xp_to_words(a_element):
     words = []
     sourcelinks = []
     wordtypecodes = []
-    valuestatecode = []
+    valuestatecode = None
     lexemevalue = None
 
     for xp_element in a_element.findall('.//h:xp', ns):
@@ -242,6 +255,8 @@ def xp_to_words(a_element):
                 if tyyp:
                     if tyyp == 'ee':
                         valuestatecode = 'eelistatud'
+                    else:
+                        valuestatecode = None
             # Stiil
             for s_element in xg_element.findall('./h:s', ns):
                 if s_element.text:
@@ -357,7 +372,7 @@ def ter_word(a_element):
     words = []
     for terg_element in a_element.findall('.//h:terg', ns):
         lang = 'est'
-        valuestatecode = ''
+        valuestatecode = None
         sourcelinks = []
         lexemenotes = []
 
