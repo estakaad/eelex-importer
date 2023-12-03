@@ -59,10 +59,10 @@ class Word:
 @dataclass
 class Concept:
     datasetCode: str
-    manualEventOn: str
-    manualEventBy: str
-    firstCreateEventOn: str
-    firstCreateEventBy: str
+    manualEventOn: Optional[str] = None
+    manualEventBy: Optional[str] = None
+    firstCreateEventOn: Optional[str] = None
+    firstCreateEventBy: Optional[str] = None
     domains: List[Domain] = field(default_factory=list)
     definitions: List[Definition] = field(default_factory=list)
     notes: List[Note] = field(default_factory=list)
