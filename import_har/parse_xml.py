@@ -253,7 +253,6 @@ def xp_to_words(a_element):
                 # Vaste liik
                 liik = x_element.attrib.get(f'{{{ns["h"]}}}liik', '')
                 if liik:
-                    print(liik)
                     if liik == 'l':
                         wordtypecodes.append(liik)
 
@@ -273,7 +272,7 @@ def xp_to_words(a_element):
                     value=def_value,
                     lang=xml_helpers.map_lang_codes(lang),
                     definitionTypeCode='definitsioon',
-                    sourceLinks=None
+                    sourceLinks=[]
                 ))
 
             # Stiil
@@ -310,7 +309,7 @@ def xp_to_words(a_element):
                     value=mrk_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')',
                     lang=xml_helpers.map_lang_codes(mrk_lang_value),
                     publicity=False,
-                    sourceLinks=None
+                    sourceLinks=[]
                 ))
 
             # Grammatika grupp
@@ -415,7 +414,7 @@ def ter_word(a_element):
                 value='Hääldus: ' + h.text,
                 lang='est',
                 publicity=True,
-                sourceLinks=None
+                sourceLinks=[]
             )
             lexemenotes.append(lexemenote)
 
@@ -424,7 +423,7 @@ def ter_word(a_element):
                 value='Lähtekeel: ' + e.text,
                 lang='est',
                 publicity=True,
-                sourceLinks=None
+                sourceLinks=[]
             )
             lexemenotes.append(lexemenote)
 
@@ -442,7 +441,7 @@ def ter_word(a_element):
                     value=lexemenote_value,
                     lang='est',
                     publicity=True,
-                    sourceLinks=None
+                    sourceLinks=[]
                 )
 
                 lexemenotes.append(lexemenote)
@@ -454,7 +453,7 @@ def ter_word(a_element):
                         value='Vorminimi: ' + lexemenote_value,
                         lang='est',
                         publicity=True,
-                        sourceLinks=None
+                        sourceLinks=[]
                     )
 
                     lexemenotes.append(lexemenote)
