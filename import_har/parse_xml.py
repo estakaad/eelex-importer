@@ -94,8 +94,14 @@ def parse_xml(file_path):
             words.append(w)
 
         # Võõrkeelsed vasted
-        for w in xp_to_words(a_element):
+
+        foreign_words, foreign_definitions = xp_to_words(a_element)
+
+        for w in foreign_words:
             words.append(w)
+
+        for d in foreign_definitions:
+            definitions.append(d)
 
         # Koosta mõiste objekt
         concept = data_classes.Concept(
@@ -230,6 +236,7 @@ def xp_to_words(a_element):
     wordtypecodes = []
     valuestatecode = None
     lexemevalue = None
+    definitions = []
 
     for xp_element in a_element.findall('.//h:xp', ns):
         lang = xp_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
@@ -257,6 +264,18 @@ def xp_to_words(a_element):
                         valuestatecode = 'eelistatud'
                     else:
                         valuestatecode = None
+
+            # Kaudtõlge
+            for xqd_element in xg_element.findall('./h:xqd', ns):
+                def_value = xqd_element.text
+
+                definitions.append(data_classes.Definition(
+                    value=def_value,
+                    lang=xml_helpers.map_lang_codes(lang),
+                    definitionTypeCode='definitsioon',
+                    sourceLinks=None
+                ))
+
             # Stiil
             for s_element in xg_element.findall('./h:s', ns):
                 if s_element.text:
@@ -270,8 +289,6 @@ def xp_to_words(a_element):
             # Märkus
             for co_element in xg_element.findall('./h:co', ns):
                 co_lang = co_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
-
-                print(co_lang)
 
                 if co_element.text:
                     lexemenotes.append(data_classes.Lexemenote(
@@ -295,7 +312,6 @@ def xp_to_words(a_element):
                     publicity=False,
                     sourceLinks=None
                 ))
-
 
             # Grammatika grupp
             for xgrg_element in xg_element.findall('./h:xgrg', ns):
@@ -364,7 +380,7 @@ def xp_to_words(a_element):
                 lexemeSourceLinks=word_sourcelinks
             ))
 
-    return words
+    return words, definitions
 
 
 
