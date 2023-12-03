@@ -4,7 +4,10 @@ import data_classes
 import xml_helpers
 
 
-ns = {'h': 'http://www.eki.ee/dict/har'}
+ns = {
+    'h': 'http://www.eki.ee/dict/har',
+    'xml': 'http://www.w3.org/XML/1998/namespace'
+}
 
 # Function to parse XML and create Concept objects
 def parse_xml(file_path):
@@ -81,61 +84,6 @@ def parse_xml(file_path):
         # Võõrkeelsed vasted
         for w in xp_to_words(a_element):
             words.append(w)
-
-        # for xp_element in a_element.findall('./h:xp', ns):
-        #     lang = xp_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
-        #
-        #     for xg_element in xp_element.findall('.//h:xg', ns):
-        #         lexemenotes = []
-        #
-        #         for x_element in xg_element.findall('./h:x', ns):
-        #             value = x_element.text
-        #             sourcelinks = []
-        #
-        #             # Võõrkeelse vaste allikaviide
-        #             for all_element in x_element.findall('.//h:all', ns):
-        #                 source_value = all_element.text
-        #                 print(source_value)
-        #                 sourcelink = data_classes.Sourcelink(sourceId=121611, value=source_value, name='')
-        #                 sourcelinks.append(sourcelink)
-        #                 words.append(word)
-        #
-        #         for co_element in xg_element.findall('./h:co', ns):
-        #
-        #             lexemenote_value = co_element.text
-        #
-        #             lexemenotes.append(data_classes.Lexemenote(
-        #                 value=lexemenote_value,
-        #                 lang='est',
-        #                 publicity=True,
-        #                 sourceLinks=sourcelinks))
-        #
-        #         # Mitteavalik märkus
-        #         for mrk_element in xg_element.findall('.//h:mrk', ns):
-        #
-        #             not_public_lexemenote_value = mrk_element.text
-        #
-        #             lexemenotes.append(data_classes.Lexemenote(
-        #                 value=not_public_lexemenote_value,
-        #                 lang='est',
-        #                 publicity=False,
-        #                 sourceLinks=sourcelinks))
-        #
-        #         valuestatecode = ''
-        #
-        #         # Stiil
-        #         for s in xg_element.findall('./h:s', ns):
-        #             if s == 'van':
-        #                 valuestatecode = 'endine'
-        #
-        #         word = data_classes.Word(value=value,
-        #                                  lang=xml_helpers.map_lang_codes(lang),
-        #                                  lexemePublicity=True,
-        #                                  lexemeValueStateCode=valuestatecode,
-        #                                  lexemeNotes=lexemenotes,
-        #                                  lexemeSourceLinks=sourcelinks)
-        #         words.append(word)
-
 
         # Koosta mõiste objekt
         concept = data_classes.Concept(
@@ -262,8 +210,6 @@ def tg_def_definition(tg_element):
             sourceLinks=sourcelinks)
 
     return definition, notes, forums
-
-
 # Vastete plokk
 def xp_to_words(a_element):
     words = []
@@ -278,6 +224,7 @@ def xp_to_words(a_element):
 
         for xg_element in xp_element.findall('./h:xg', ns):
             lexemenotes = []
+            word_sourcelinks = []
 
             # Vaste
             for x_element in xg_element.findall('./h:x', ns):
@@ -295,6 +242,45 @@ def xp_to_words(a_element):
                 if tyyp:
                     if tyyp == 'ee':
                         valuestatecode = 'eelistatud'
+            # Stiil
+            for s_element in xg_element.findall('./h:s', ns):
+                if s_element.text:
+                    lexemenotes.append(data_classes.Lexemenote(
+                        value='Stiil: ' + s_element.text,
+                        lang=xml_helpers.map_lang_codes(lang),
+                        publicity=True,
+                        sourceLinks=sourcelinks
+                    ))
+
+            # Märkus
+            for co_element in xg_element.findall('./h:co', ns):
+                co_lang = co_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
+
+                print(co_lang)
+
+                if co_element.text:
+                    lexemenotes.append(data_classes.Lexemenote(
+                        value=co_element.text,
+                        lang=xml_helpers.map_lang_codes(co_lang),
+                        publicity=True,
+                        sourceLinks=sourcelinks
+                    ))
+
+            # Sisemärkus (mitteavalik ilmiku märkus)
+            for mrk_element in xg_element.findall('./h:mrk', ns):
+                mrk_lang_value = mrk_element.attrib.get(f'{{{ns["h"]}}}lang', '')
+                mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
+                mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
+
+                mrk_value = mrk_element.text
+
+                lexemenotes.append(data_classes.Lexemenote(
+                    value=mrk_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')',
+                    lang=xml_helpers.map_lang_codes(mrk_lang_value),
+                    publicity=False,
+                    sourceLinks=None
+                ))
+
 
             # Grammatika grupp
             for xgrg_element in xg_element.findall('./h:xgrg', ns):
@@ -344,6 +330,15 @@ def xp_to_words(a_element):
                         sourceLinks=sourcelinks
                     ))
 
+            # Allikas
+            for all_element in xg_element.findall('./h:all', ns):
+                if all_element.text:
+                    word_sourcelinks.append(data_classes.Sourcelink(
+                        sourceId=xml_helpers.get_source_id_by_name(all_element.text),
+                        value=all_element.text,
+                        name=''
+                    ))
+
             words.append(data_classes.Word(
                 value=lexemevalue,
                 lang=xml_helpers.map_lang_codes(lang),
@@ -351,7 +346,7 @@ def xp_to_words(a_element):
                 lexemeValueStateCode=valuestatecode,
                 wordTypeCodes=wordtypecodes,
                 lexemeNotes=lexemenotes,
-                lexemeSourceLinks=sourcelinks
+                lexemeSourceLinks=word_sourcelinks
             ))
 
     return words
@@ -440,3 +435,5 @@ def ter_word(a_element):
         words.append(word)
 
     return words
+
+

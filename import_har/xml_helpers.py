@@ -40,6 +40,7 @@ def get_source_id_by_name(name):
 
 def map_lang_codes(lang_code_xml):
     codes = {
+        "et": "est",
         "ru": "rus",
         "ee": "est",
         "en": "eng",
