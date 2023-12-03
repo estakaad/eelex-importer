@@ -391,17 +391,26 @@ def ter_word(a_element):
         valuestatecode = None
         sourcelinks = []
         lexemenotes = []
+        wordtypecodes = []
 
         for ter_element in terg_element.findall('./h:ter', ns):
             value = ter_element.text
 
-        for s in terg_element.findall('./h:s', ns):
-            if s.text == 'van':
-                print(value)
-                valuestatecode = 'endine'
+            # Vaste liik
+            liik = ter_element.attrib.get(f'{{{ns["h"]}}}liik', '')
+            if liik:
+                if liik == 'l':
+                    wordtypecodes.append(liik)
+
+            # Vaste tüüp
+            tyyp = ter_element.attrib.get(f'{{{ns["h"]}}}tyyp', '')
+            if tyyp:
+                if tyyp == 'ee':
+                    valuestatecode = 'eelistatud'
+                else:
+                    valuestatecode = None
 
         for h in terg_element.findall('./h:hld', ns):
-            print(h.text)
             lexemenote = data_classes.Lexemenote(
                 value='Hääldus: ' + h.text,
                 lang='est',
@@ -461,6 +470,7 @@ def ter_word(a_element):
                                  lang=lang,
                                  lexemePublicity=True,
                                  lexemeValueStateCode=valuestatecode,
+                                 wordTypeCodes=wordtypecodes,
                                  lexemeNotes=lexemenotes,
                                  lexemeSourceLinks=sourcelinks)
         words.append(word)
