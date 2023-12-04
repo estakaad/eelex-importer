@@ -36,7 +36,8 @@ def get_source_id_by_name(name):
     "Good ja Power": 31,
     "ERIP": 32
 }
-    return sources.get(name, "Unknown Source")
+    #return sources.get(name, "Unknown Source")
+    return 121611
 
 def map_lang_codes(lang_code_xml):
     codes = {

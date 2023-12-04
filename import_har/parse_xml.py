@@ -67,7 +67,8 @@ def parse_xml(file_path):
 
         for tg_element in a_element.findall('.//h:tg', ns):
             definition, notes_from_xml, forums_from_xml = tg_def_definition(tg_element)
-            definitions.append(definition)
+            if definition:
+                definitions.append(definition)
             for note in notes_from_xml:
                 if note.value:
                     notes.append(note)
