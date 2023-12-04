@@ -306,8 +306,6 @@ def xp_to_words(a_element):
             # Sisemärkus (mitteavalik ilmiku märkus)
             for mrk_element in xg_element.findall('./h:mrk', ns):
                 mrk_lang_value = mrk_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
-
-                print(mrk_lang_value)
                 mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
                 mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
 
