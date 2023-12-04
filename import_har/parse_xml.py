@@ -69,9 +69,11 @@ def parse_xml(file_path):
             definition, notes_from_xml, forums_from_xml = tg_def_definition(tg_element)
             definitions.append(definition)
             for note in notes_from_xml:
-                notes.append(note)
+                if note.value:
+                    notes.append(note)
             for forum in forums_from_xml:
-                forums.append(forum)
+                if forum.value:
+                    forums.append(forum)
 
         # Kommentaarid (sisemärkusteks)
 
@@ -98,14 +100,16 @@ def parse_xml(file_path):
         foreign_words, foreign_definitions = xp_to_words(a_element)
 
         for w in foreign_words:
-            words.append(w)
+            if w.value:
+                words.append(w)
 
         for d in foreign_definitions:
-            definitions.append(d)
+            if d.value:
+                definitions.append(d)
 
         # Koosta mõiste objekt
         concept = data_classes.Concept(
-            datasetCode='har-03-12',
+            datasetCode='har-4-12',
             conceptIds=conceptids,
             domains=domains,
             manualEventOn=manualEventOn,
@@ -179,9 +183,11 @@ def tg_def_definition(tg_element):
         evt_attrib_value = evt_element.attrib.get(f'{{{ns["h"]}}}evtl', '')
 
         if evt_attrib_value == "vrd":
-            evts_vrd.append(evt_value)
+            if evt_value:
+                evts_vrd.append(evt_value)
         elif evt_attrib_value == "vt ka":
-            evts_vt_ka.append(evt_value)
+            if evt_value:
+                evts_vt_ka.append(evt_value)
 
     if evts_vrd:
         combined_evts_vrd = ', '.join(evts_vrd)
@@ -299,7 +305,9 @@ def xp_to_words(a_element):
 
             # Sisemärkus (mitteavalik ilmiku märkus)
             for mrk_element in xg_element.findall('./h:mrk', ns):
-                mrk_lang_value = mrk_element.attrib.get(f'{{{ns["h"]}}}lang', '')
+                mrk_lang_value = mrk_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
+
+                print(mrk_lang_value)
                 mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
                 mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
 
