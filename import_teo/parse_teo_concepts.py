@@ -162,8 +162,6 @@ def parse_words(A):
 
         if etym:
             lang = helpers.match_language(etym.text)
-        elif liik_value == 'z':
-            lang = 'lad'
         else:
             lang = 'est'
 
@@ -201,7 +199,7 @@ def parse_words(A):
 
         words.append({
             "value": ter.text,
-            "lang": lang,
+            "lang": terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"}) if terg.find(".//x:etym", namespaces={"x": "http://www.eki.ee/dict/teo"}) else 'est',
             "lexemeValueStateCode": [lexemeValueStateCode] if lexemeValueStateCode else None,
             "lexemePublicity": True if is_concept_public(A) else False,
             "sourceLinks": sourceLinks,

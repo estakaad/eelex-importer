@@ -1,17 +1,13 @@
-import parse_teo_concepts
+import parse_xml
+import xml_helpers
 import helpers
-import import_concepts
 
+input_xml_file_path = "__sr/teo/teo1.xml"
+prettified_xml_file_path = "__sr/teo/teo1_prettified.xml"
+output_json_file_path = '__sr/teo/teo1.json'
 
-dataset_code = 'usu-3110'
-file_path = 'teo/__sr/teo/teo1.xml'
-prettified_file = 'teo/__sr/teo/beautified_teo.xml'
-output_json = 'output-test.json'
+#helpers.beautify_xml(input_xml_file_path, prettified_xml_file_path)
 
-#helpers.beautify_xml(file_path, prettified_file)
-parse_teo_concepts.parse_xml(prettified_file, output_json, dataset_code)
+concepts = parse_xml.parse_xml(prettified_xml_file_path)
 
-# Update word ID-s
-#import_concepts.update_word_ids(output_json, 'eki', 'usu-3110')
-
-# Import concepts ...
+xml_helpers.write_dicts_to_json_file(concepts, output_json_file_path)
