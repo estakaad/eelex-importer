@@ -92,9 +92,14 @@ def parse_xml(file_path):
 
             forums.append(forum_item)
 
+        words_from_est_terms, concept_notes = ter_word(a_element)
+
         # Eestikeelsed terminid
-        for w in ter_word(a_element):
+        for w in words_from_est_terms:
             words.append(w)
+
+        for c in concept_notes:
+            notes.append(c)
 
         # Võõrkeelsed vasted
 
@@ -285,6 +290,17 @@ def xp_to_words(a_element):
             # Stiil
             for s_element in xg_element.findall('./h:s', ns):
                 if s_element.text:
+                    if s_element.text == 'halb':
+                        valuestatecode = 'väldi'
+                    elif s_element.text == 'van':
+                        valuestatecode = 'vananenud'
+                    elif s_element.text == 'kõnek':
+                        break
+                    elif s_element.text == 'aj':
+                        break
+                    else:
+                        break
+
                     lexemenotes.append(data_classes.Lexemenote(
                         value='Stiil: ' + s_element.text,
                         lang=xml_helpers.map_lang_codes(lang),
@@ -392,6 +408,7 @@ def xp_to_words(a_element):
 
 def ter_word(a_element):
     words = []
+    concept_notes = []
     for terg_element in a_element.findall('.//h:terg', ns):
         lang = 'est'
         valuestatecode = None
@@ -402,7 +419,6 @@ def ter_word(a_element):
         for ter_element in terg_element.findall('./h:ter', ns):
 
             if '[' in ter_element.text and '?' not in ter_element.text:
-                print(ter_element.text)
                 words.append(data_classes.Word(
                     value=ter_element.text.replace('[', '').replace(']', ''),
                     lang='est',
@@ -429,6 +445,25 @@ def ter_word(a_element):
                 else:
                     valuestatecode = None
 
+        for s in terg_element.findall('./h:s', ns):
+
+            if s.text == 'halb':
+                valuestatecode = 'väldi'
+            elif s.text == 'van':
+                valuestatecode = 'vananenud'
+            elif s.text == 'kõnek':
+                break
+            elif s.text == 'aj':
+                concept_notes.append(data_classes.Note(
+                    value='aj',
+                    lang='est',
+                    publicity=True,
+                    sourceLinks=[]
+                ))
+            else:
+                break
+
+
         for h in terg_element.findall('./h:hld', ns):
             lexemenote = data_classes.Lexemenote(
                 value='Hääldus: ' + h.text,
@@ -447,38 +482,6 @@ def ter_word(a_element):
             )
             lexemenotes.append(lexemenote)
 
-        for grg in terg_element.findall('./h:grg', ns):
-            for mv in grg.findall('./h:mv', ns):
-
-                vn_attribute = mv.attrib.get(f'{{{ns["h"]}}}vn')
-
-                if vn_attribute:
-                    lexemenote_value = f'Muutevormid: {mv.text}, vorminimi: {vn_attribute}'
-                else:
-                    lexemenote_value = f'Muutevormid: {mv.text}'
-
-                lexemenote = data_classes.Lexemenote(
-                    value=lexemenote_value,
-                    lang='est',
-                    publicity=True,
-                    sourceLinks=[]
-                )
-
-                lexemenotes.append(lexemenote)
-
-            for vk in grg.findall('./h:vk', ns):
-                if vk:
-                    lexemenote_value = vk.text
-                    lexemenote = data_classes.Lexemenote(
-                        value='Vorminimi: ' + lexemenote_value,
-                        lang='est',
-                        publicity=True,
-                        sourceLinks=[]
-                    )
-
-                    lexemenotes.append(lexemenote)
-
-
         # Eestikeelse termini allikaviide
         for all_element in terg_element.findall('./h:all', ns):
             source_value = all_element.text
@@ -494,6 +497,6 @@ def ter_word(a_element):
                                  lexemeSourceLinks=sourcelinks)
         words.append(word)
 
-    return words
+    return words, concept_notes
 
 
