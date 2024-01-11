@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 import data_classes
 import xml_helpers
-
+import re
 
 ns = {
     'h': 'http://www.eki.ee/dict/har',
@@ -400,7 +400,20 @@ def ter_word(a_element):
         wordtypecodes = []
 
         for ter_element in terg_element.findall('./h:ter', ns):
-            value = ter_element.text
+
+            if '[' in ter_element.text and '?' not in ter_element.text:
+                print(ter_element.text)
+                words.append(data_classes.Word(
+                    value=ter_element.text.replace('[', '').replace(']', ''),
+                    lang='est',
+                    lexemePublicity=True,
+                    lexemeValueStateCode=None,
+                    wordTypeCodes=[],
+                    lexemeNotes=[],
+                    lexemeSourceLinks=[]
+                ))
+
+            value = re.sub(r'\[.*?\]', '', ter_element.text)
 
             # Vaste liik
             liik = ter_element.attrib.get(f'{{{ns["h"]}}}liik', '')
