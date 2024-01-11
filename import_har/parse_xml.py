@@ -54,13 +54,6 @@ def parse_xml(file_path):
         for creator in a_element.findall('.//h:K', ns):
             firstCreateEventBy = creator.text
 
-        # Viimase muutmise aeg -
-        for last_edit in a_element.findall('.//h:TA', ns):
-            manualEventOn = last_edit.text
-            date_part = manualEventOn.split("T")[0]
-            parts = date_part.split("-")
-            manualEventOn = f"{parts[2]}.{parts[1]}.{parts[0]}"
-
         # Viimane muutja
         for editor in a_element.findall('.//h:T', ns):
             manualEventBy = editor.text
@@ -462,7 +455,6 @@ def ter_word(a_element):
                 ))
             else:
                 break
-
 
         for h in terg_element.findall('./h:hld', ns):
             lexemenote = data_classes.Lexemenote(
