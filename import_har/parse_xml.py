@@ -30,9 +30,8 @@ def parse_xml(file_path):
 
         # Valdkonnad
         for v_element in a_element.findall('.//h:v', ns):
-            #d_domain = v_element.text
-            d_domain = 'ED1'
-            d_origin = 'lenoch'
+            d_domain = v_element.text
+            d_origin = 'har'
             domain = {
                 'code': d_domain,
                 'origin': d_origin
@@ -69,7 +68,7 @@ def parse_xml(file_path):
                 if forum.value:
                     forums.append(forum)
 
-        # Kommentaarid (sisemärkusteks)
+        # Kommentaarid
 
         for kom_group_element in a_element.findall('.//h:komg', ns):
             for kom_elem in kom_group_element.findall('.//h:kom', ns):
@@ -79,11 +78,14 @@ def parse_xml(file_path):
             for kom_t_elem in kom_group_element.findall('.//h:kaeg', ns):
                 time = kom_t_elem.text
 
-            forum_item = data_classes.Forum(
-                value=content + ' (' + author + ', ' + time + ')'
+            notes.append(
+                data_classes.Note(
+                    value=content + ' (' + author + ', ' + time + ')',
+                    lang='est',
+                    publicity=False,
+                    sourceLinks=[]
+                )
             )
-
-            forums.append(forum_item)
 
         words_from_est_terms, concept_notes = ter_word(a_element)
 
@@ -144,12 +146,15 @@ def tg_def_definition(tg_element):
                 name='')
             sourcelinks.append(sourcelink)
         for dn_element in dg_element.findall('./h:dn', ns):
-            notes.append(data_classes.Note(
-                value=dn_element.text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            ))
+            if def_value:
+                def_value = def_value + ', nt ' + dn_element.text
+            else:
+                notes.append(data_classes.Note(
+                    value=dn_element.text,
+                    lang='est',
+                    publicity=True,
+                    sourceLinks=[]
+                ))
 
     for co_element in tg_element.findall('./h:co', ns):
         notes.append(data_classes.Note(
@@ -218,6 +223,13 @@ def tg_def_definition(tg_element):
         mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
         mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
         forum_value = mrk_element.text
+        if forum_value.startswith('['):
+            print(forum_value)
+            name = xml_helpers.get_source_name_from_source(forum_value)
+            print(name)
+        elif forum_value.startswith('DEF: '):
+            print(forum_value.replace('DEF: ', ''))
+
         forum = data_classes.Forum(
             value=forum_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')'
         )
@@ -306,12 +318,24 @@ def xp_to_words(a_element):
                 co_lang = co_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
 
                 if co_element.text:
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value=co_element.text,
-                        lang=xml_helpers.map_lang_codes(co_lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
+                    if '[EKSPERT]' in co_element.text:
+                        lexemenotes.append(data_classes.Lexemenote(
+                            value=co_element.text.replace(' [EKSPERT]', ''),
+                            lang=xml_helpers.map_lang_codes(co_lang),
+                            publicity=True,
+                            sourceLinks=[data_classes.Sourcelink(
+                                sourceId=xml_helpers.get_source_id_by_name('Ekspert'),
+                                value='Ekspert',
+                                name=''
+                            )]
+                        ))
+                    else:
+                        lexemenotes.append(data_classes.Lexemenote(
+                            value=co_element.text,
+                            lang=xml_helpers.map_lang_codes(co_lang),
+                            publicity=True,
+                            sourceLinks=[]
+                        ))
 
             # Sisemärkus (mitteavalik ilmiku märkus)
             for mrk_element in xg_element.findall('./h:mrk', ns):
@@ -320,6 +344,9 @@ def xp_to_words(a_element):
                 mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
 
                 mrk_value = mrk_element.text
+
+                if mrk_value.startswith('['):
+                    print(mrk_value)
 
                 lexemenotes.append(data_classes.Lexemenote(
                     value=mrk_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')',
@@ -412,6 +439,7 @@ def ter_word(a_element):
         for ter_element in terg_element.findall('./h:ter', ns):
 
             if '[' in ter_element.text and '?' not in ter_element.text:
+                print(ter_element.text)
                 words.append(data_classes.Word(
                     value=ter_element.text.replace('[', '').replace(']', ''),
                     lang='est',
@@ -448,7 +476,7 @@ def ter_word(a_element):
                 break
             elif s.text == 'aj':
                 concept_notes.append(data_classes.Note(
-                    value='aj',
+                    value='Ajalooline mõiste',
                     lang='est',
                     publicity=True,
                     sourceLinks=[]

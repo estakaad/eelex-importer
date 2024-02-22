@@ -34,7 +34,8 @@ def get_source_id_by_name(name):
     "Koemets": 29,
     "Raili Pool": 30,
     "Good ja Power": 31,
-    "ERIP": 32
+    "ERIP": 32,
+    "Ekspert": 33
 }
     #return sources.get(name, "Unknown Source")
     return 121611
@@ -55,3 +56,19 @@ def write_dicts_to_json_file(dicts_list, file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         dicts_to_serialize = [asdict(obj) for obj in dicts_list]
         json.dump(dicts_to_serialize, f, ensure_ascii=False, indent=4)
+
+def get_source_name_from_source(source):
+    if 'wikipedia' in source:
+        return 'Wikipedia'
+    elif source.startswith('https'):
+        split_https = source.split('https://')[-1]
+        split_dot = split_https.split('.')[0]
+        name = split_dot.replace('www.', '') if 'www.' in split_dot else split_dot
+        return name
+    elif source.startswith('http'):
+        split_https = source.split('http://')[-1]
+        split_dot = split_https.split('.')[0]
+        name = split_dot.replace('www.', '') if 'www.' in split_dot else split_dot
+        return name
+    else:
+        return source
