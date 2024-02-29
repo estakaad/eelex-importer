@@ -72,3 +72,15 @@ def get_source_name_from_source(source):
         return name
     else:
         return source
+
+def load_sources(path):
+    with open(path, 'r', encoding='utf-8') as file:
+        return json.load(file)
+
+def get_source_id_by_source_text(data, source_text):
+    for entry in data:
+        if entry.get('valuePrese') == source_text:
+            #print(source_text)
+            return entry.get('id')
+        else:
+            continue

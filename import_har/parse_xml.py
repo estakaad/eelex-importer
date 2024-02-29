@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 import data_classes
 import xml_helpers
 import re
+import csv
+
 
 ns = {
     'h': 'http://www.eki.ee/dict/har',
@@ -10,11 +12,15 @@ ns = {
 }
 
 # Function to parse XML and create Concept objects
-def parse_xml(file_path):
+def parse_xml(dataset_code, file_path, sources_file_path):
+
+    sources_with_ids = xml_helpers.load_sources(sources_file_path)
+
     tree = ET.parse(file_path)
     root = tree.getroot()
 
     concepts = []
+    sources = []
 
     for a_element in root.findall('.//h:A', ns):
         domains = []
@@ -58,7 +64,7 @@ def parse_xml(file_path):
             manualEventBy = editor.text
 
         for tg_element in a_element.findall('.//h:tg', ns):
-            definition, notes_from_xml, forums_from_xml = tg_def_definition(tg_element)
+            definition, notes_from_xml, forums_from_xml, sources_from_xml = tg_def_definition(tg_element, sources_with_ids)
             if definition:
                 definitions.append(definition)
             for note in notes_from_xml:
@@ -67,6 +73,8 @@ def parse_xml(file_path):
             for forum in forums_from_xml:
                 if forum.value:
                     forums.append(forum)
+            for s in sources_from_xml:
+                sources.append(s)
 
         # Kommentaarid
 
@@ -87,7 +95,7 @@ def parse_xml(file_path):
                 )
             )
 
-        words_from_est_terms, concept_notes = ter_word(a_element)
+        words_from_est_terms, concept_notes = ter_word(sources_with_ids, a_element)
 
         # Eestikeelsed terminid
         for w in words_from_est_terms:
@@ -98,19 +106,22 @@ def parse_xml(file_path):
 
         # Võõrkeelsed vasted
 
-        foreign_words, foreign_definitions = xp_to_words(a_element)
+        foreign_words, foreign_definitions, sources_from_xp = xp_to_words(a_element, sources_with_ids)
 
         for w in foreign_words:
-            if w.value:
+            if w.valuePrese:
                 words.append(w)
 
         for d in foreign_definitions:
             if d.value:
                 definitions.append(d)
 
+        for s in sources_from_xp:
+            sources.append(s)
+
         # Koosta mõiste objekt
         concept = data_classes.Concept(
-            datasetCode='har-4-12',
+            datasetCode=dataset_code,
             conceptIds=conceptids,
             domains=domains,
             manualEventOn=manualEventOn,
@@ -124,24 +135,28 @@ def parse_xml(file_path):
         )
         concepts.append(concept)
 
+    #print(sources)
     return concepts
 
 
 # Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
-def tg_def_definition(tg_element):
+def tg_def_definition(tg_element, sources_with_ids):
     def_value = None
     definition = None
     notes = []
     sourcelinks = []
     forums = []
 
+    sources = []
+
     for dg_element in tg_element.findall('./h:dg', ns):
         for def_element in dg_element.findall('./h:def', ns):
             def_value = def_element.text
         for all_element in dg_element.findall('./h:all', ns):
             source_value = all_element.text
+            sources.append(source_value)
             sourcelink = data_classes.Sourcelink(
-                sourceId=121611,
+                sourceId=xml_helpers.get_source_id_by_source_text(sources_with_ids, source_value),
                 value=source_value,
                 name='')
             sourcelinks.append(sourcelink)
@@ -217,25 +232,7 @@ def tg_def_definition(tg_element):
         )
         notes.append(note_vt_ka)
 
-    # Sisemärkus
-    forum = None
-    for mrk_element in tg_element.findall('./h:mrk', ns):
-        mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
-        mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
-        forum_value = mrk_element.text
-        if forum_value.startswith('['):
-            print(forum_value)
-            name = xml_helpers.get_source_name_from_source(forum_value)
-            print(name)
-        elif forum_value.startswith('DEF: '):
-            print(forum_value.replace('DEF: ', ''))
 
-        forum = data_classes.Forum(
-            value=forum_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')'
-        )
-
-    if forum is not None:
-        forums.append(forum)
 
     if def_value:
         definition = data_classes.Definition(
@@ -244,16 +241,43 @@ def tg_def_definition(tg_element):
             definitionTypeCode='definitsioon',
             sourceLinks=sourcelinks)
 
-    return definition, notes, forums
+    # Sisemärkus
+    forum = None
+    for mrk_element in tg_element.findall('./h:mrk', ns):
+        mrk_maut_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maut', '')
+        mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["h"]}}}maeg', '')
+        forum_value = mrk_element.text
+        if forum_value.startswith('['):
+            sources.append(forum_value)
+            print(forum_value)
+            name = xml_helpers.get_source_name_from_source(forum_value)
+        elif forum_value.startswith('DEF: '):
+            search_value = forum_value.replace('DEF: ', '').strip().strip('[').strip(']')
+            definition.sourceLinks.append(data_classes.Sourcelink(
+                sourceId=xml_helpers.get_source_id_by_source_text(sources_with_ids, search_value),
+                value=search_value,
+                name=''
+            ))
+            continue
+        forum = data_classes.Forum(
+            value=forum_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')'
+        )
+
+    if forum is not None:
+        forums.append(forum)
+
+    return definition, notes, forums, sources
 
 # Vastete plokk
-def xp_to_words(a_element):
+def xp_to_words(a_element, sources_with_ids):
     words = []
     sourcelinks = []
     wordtypecodes = []
     valuestatecode = None
     lexemevalue = None
     definitions = []
+
+    sources_from_xp = []
 
     for xp_element in a_element.findall('.//h:xp', ns):
         lang = xp_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
@@ -346,7 +370,9 @@ def xp_to_words(a_element):
                 mrk_value = mrk_element.text
 
                 if mrk_value.startswith('['):
-                    print(mrk_value)
+                    #print(mrk_value)
+                    sources_from_xp.append(mrk_value)
+                    continue
 
                 lexemenotes.append(data_classes.Lexemenote(
                     value=mrk_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')',
@@ -406,14 +432,15 @@ def xp_to_words(a_element):
             # Allikas
             for all_element in xg_element.findall('./h:all', ns):
                 if all_element.text:
+                    sources_from_xp.append(all_element.text)
                     word_sourcelinks.append(data_classes.Sourcelink(
-                        sourceId=xml_helpers.get_source_id_by_name(all_element.text),
+                        sourceId=xml_helpers.get_source_id_by_source_text(sources_with_ids, all_element.text),
                         value=all_element.text,
                         name=''
                     ))
 
             words.append(data_classes.Word(
-                value=lexemevalue,
+                valuePrese=lexemevalue,
                 lang=xml_helpers.map_lang_codes(lang),
                 lexemePublicity=True,
                 lexemeValueStateCode=valuestatecode,
@@ -422,11 +449,11 @@ def xp_to_words(a_element):
                 lexemeSourceLinks=word_sourcelinks
             ))
 
-    return words, definitions
+    return words, definitions, sources_from_xp
 
 
 
-def ter_word(a_element):
+def ter_word(sources_with_ids, a_element):
     words = []
     concept_notes = []
     for terg_element in a_element.findall('.//h:terg', ns):
@@ -439,9 +466,9 @@ def ter_word(a_element):
         for ter_element in terg_element.findall('./h:ter', ns):
 
             if '[' in ter_element.text and '?' not in ter_element.text:
-                print(ter_element.text)
+                #print(ter_element.text)
                 words.append(data_classes.Word(
-                    value=ter_element.text.replace('[', '').replace(']', ''),
+                    valuePrese=ter_element.text.replace('[', '').replace(']', ''),
                     lang='est',
                     lexemePublicity=True,
                     lexemeValueStateCode=None,
@@ -484,14 +511,15 @@ def ter_word(a_element):
             else:
                 break
 
-        for h in terg_element.findall('./h:hld', ns):
-            lexemenote = data_classes.Lexemenote(
-                value='Hääldus: ' + h.text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            )
-            lexemenotes.append(lexemenote)
+        # for h in terg_element.findall('./h:hld', ns):
+        #     print(h.text)
+        #     lexemenote = data_classes.Lexemenote(
+        #         value='Hääldus: ' + h.text,
+        #         lang='est',
+        #         publicity=True,
+        #         sourceLinks=[]
+        #     )
+        #     lexemenotes.append(lexemenote)
 
         for e in terg_element.findall('./h:etym', ns):
             lexemenote = data_classes.Lexemenote(
@@ -505,10 +533,13 @@ def ter_word(a_element):
         # Eestikeelse termini allikaviide
         for all_element in terg_element.findall('./h:all', ns):
             source_value = all_element.text
-            sourcelink = data_classes.Sourcelink(sourceId=121611, value=source_value, name='')
+            sourcelink = data_classes.Sourcelink(
+                sourceId=xml_helpers.get_source_id_by_source_text(sources_with_ids, source_value),
+                value=source_value,
+                name='')
             sourcelinks.append(sourcelink)
 
-        word = data_classes.Word(value=value,
+        word = data_classes.Word(valuePrese=value,
                                  lang=lang,
                                  lexemePublicity=True,
                                  lexemeValueStateCode=valuestatecode,
