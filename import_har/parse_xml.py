@@ -161,7 +161,6 @@ def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict):
 
     sources = []
 
-
     for dg_element in tg_element.findall('./h:dg', ns):
         for def_element in dg_element.findall('./h:def', ns):
             def_value = def_element.text
@@ -192,24 +191,26 @@ def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict):
             sourceLinks=[]
         ))
 
+    meaning_relations = []
+
+
     # Tesaurus
+    # Tähenduse seosed (ant > antonüüm)
     for tes_element in tg_element.findall('./h:tes', ns):
         for child in tes_element:
             tag_name = child.tag.split('}')[-1]
 
-            child_text = child.text if child.text is not None else ""
+            if tag_name == 'ant':
+                if xml_helpers.find_guid_by_term(child.text, guid_word_dict):
+                    meaning_relations.append(str(conceptids[0]) + '; antonüüm; ' + xml_helpers.find_guid_by_term(child.text, guid_word_dict))
+                elif child.text:
+                    print('Vigane antonüüm: ' + child.text)
+                else:
+                    print('Puudub antonüüm: ' + str(conceptids[0]))
+            else:
+                print('Muud tüüpi: ' + str(conceptids[0]))
 
-            notes.append(data_classes.Note(
-                value=tag_name + ": " + child_text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            ))
-
-    # Seotud seosega viited
-
-    seotud_relations = []
-
+    # Tähenduse seose viited (vrd, vt ka > seotud)
     for evt_element in tg_element.findall('./h:evt', ns):
         evt_value = evt_element.text if evt_element.text is not None else ""
         evt_attrib_value = evt_element.attrib.get(f'{{{ns["h"]}}}evtl', '')
@@ -218,14 +219,14 @@ def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict):
             if evt_value:
                 if xml_helpers.find_guid_by_term(evt_value, guid_word_dict):
                     relation = str(conceptids[0]) + '; seotud; ' + xml_helpers.find_guid_by_term(evt_value, guid_word_dict)
-                    seotud_relations.append(relation)
+                    meaning_relations.append(relation)
                 else:
                     print('Vigane viide: ' + evt_value)
         elif evt_attrib_value == "vt ka":
             if evt_value:
                 if xml_helpers.find_guid_by_term(evt_value, guid_word_dict):
                     relation = str(conceptids[0]) + '; seotud; ' + xml_helpers.find_guid_by_term(evt_value, guid_word_dict)
-                    seotud_relations.append(relation)
+                    meaning_relations.append(relation)
                 else:
                     print('Vigane viide: ' + evt_value)
         else:
@@ -262,7 +263,7 @@ def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict):
     if forum is not None:
         forums.append(forum)
 
-    return definition, notes, forums, sources, seotud_relations
+    return definition, notes, forums, sources, meaning_relations
 
 
 # Vastete plokk
@@ -462,7 +463,6 @@ def ter_word(sources_with_ids, a_element):
         for ter_element in terg_element.findall('./h:ter', ns):
 
             if '[' in ter_element.text and '?' not in ter_element.text:
-                #print(ter_element.text)
                 words.append(data_classes.Word(
                     valuePrese=ter_element.text.replace('[', '').replace(']', ''),
                     lang='est',
@@ -506,16 +506,6 @@ def ter_word(sources_with_ids, a_element):
                 ))
             else:
                 break
-
-        # for h in terg_element.findall('./h:hld', ns):
-        #     print(h.text)
-        #     lexemenote = data_classes.Lexemenote(
-        #         value='Hääldus: ' + h.text,
-        #         lang='est',
-        #         publicity=True,
-        #         sourceLinks=[]
-        #     )
-        #     lexemenotes.append(lexemenote)
 
         for e in terg_element.findall('./h:etym', ns):
             lexemenote = data_classes.Lexemenote(
