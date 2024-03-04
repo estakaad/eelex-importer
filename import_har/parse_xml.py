@@ -14,6 +14,8 @@ ns = {
 # Function to parse XML and create Concept objects
 def parse_xml(dataset_code, file_path, sources_file_path):
 
+    guid_word_dict = xml_helpers.build_guid_word_dict(file_path)
+
     sources_with_ids = xml_helpers.load_sources(sources_file_path)
 
     tree = ET.parse(file_path)
@@ -21,6 +23,8 @@ def parse_xml(dataset_code, file_path, sources_file_path):
 
     concepts = []
     sources = []
+
+    all_relations = []
 
     for a_element in root.findall('.//h:A', ns):
         domains = []
@@ -64,7 +68,8 @@ def parse_xml(dataset_code, file_path, sources_file_path):
             manualEventBy = editor.text
 
         for tg_element in a_element.findall('.//h:tg', ns):
-            definition, notes_from_xml, forums_from_xml, sources_from_xml = tg_def_definition(tg_element, sources_with_ids)
+            definition, notes_from_xml, forums_from_xml, sources_from_xml, seotud_relations = tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict)
+
             if definition:
                 definitions.append(definition)
             for note in notes_from_xml:
@@ -75,6 +80,10 @@ def parse_xml(dataset_code, file_path, sources_file_path):
                     forums.append(forum)
             for s in sources_from_xml:
                 sources.append(s)
+
+            if len(seotud_relations) > 0:
+                for sr in seotud_relations:
+                    all_relations.append(sr)
 
         # Kommentaarid
 
@@ -135,12 +144,15 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         )
         concepts.append(concept)
 
-    #print(sources)
+    with open('seosed.txt', 'w') as file:
+        for item in all_relations:
+            file.write(str(item) + '\n')
+
     return concepts
 
 
 # Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
-def tg_def_definition(tg_element, sources_with_ids):
+def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict):
     def_value = None
     definition = None
     notes = []
@@ -148,6 +160,7 @@ def tg_def_definition(tg_element, sources_with_ids):
     forums = []
 
     sources = []
+
 
     for dg_element in tg_element.findall('./h:dg', ns):
         for def_element in dg_element.findall('./h:def', ns):
@@ -193,9 +206,9 @@ def tg_def_definition(tg_element, sources_with_ids):
                 sourceLinks=[]
             ))
 
-    # Edasiviited
-    evts_vrd = []
-    evts_vt_ka = []
+    # Seotud seosega viited
+
+    seotud_relations = []
 
     for evt_element in tg_element.findall('./h:evt', ns):
         evt_value = evt_element.text if evt_element.text is not None else ""
@@ -203,36 +216,20 @@ def tg_def_definition(tg_element, sources_with_ids):
 
         if evt_attrib_value == "vrd":
             if evt_value:
-                evts_vrd.append(evt_value)
+                if xml_helpers.find_guid_by_term(evt_value, guid_word_dict):
+                    relation = str(conceptids[0]) + '; seotud; ' + xml_helpers.find_guid_by_term(evt_value, guid_word_dict)
+                    seotud_relations.append(relation)
+                else:
+                    print('Vigane viide: ' + evt_value)
         elif evt_attrib_value == "vt ka":
             if evt_value:
-                evts_vt_ka.append(evt_value)
-
-    if evts_vrd:
-        combined_evts_vrd = ', '.join(evts_vrd)
-        notes_value_vrd = f"Vrd: {combined_evts_vrd}"
-
-        note_vrd = data_classes.Note(
-            value=notes_value_vrd,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vrd)
-
-    if evts_vt_ka:
-        combined_evts_vt_ka = ', '.join(evts_vt_ka)
-        notes_value_vt_ka = f"Vt ka: {combined_evts_vt_ka}"
-
-        note_vt_ka = data_classes.Note(
-            value=notes_value_vt_ka,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vt_ka)
-
-
+                if xml_helpers.find_guid_by_term(evt_value, guid_word_dict):
+                    relation = str(conceptids[0]) + '; seotud; ' + xml_helpers.find_guid_by_term(evt_value, guid_word_dict)
+                    seotud_relations.append(relation)
+                else:
+                    print('Vigane viide: ' + evt_value)
+        else:
+            continue
 
     if def_value:
         definition = data_classes.Definition(
@@ -249,7 +246,6 @@ def tg_def_definition(tg_element, sources_with_ids):
         forum_value = mrk_element.text
         if forum_value.startswith('['):
             sources.append(forum_value)
-            print(forum_value)
             name = xml_helpers.get_source_name_from_source(forum_value)
         elif forum_value.startswith('DEF: '):
             search_value = forum_value.replace('DEF: ', '').strip().strip('[').strip(']')
@@ -266,7 +262,8 @@ def tg_def_definition(tg_element, sources_with_ids):
     if forum is not None:
         forums.append(forum)
 
-    return definition, notes, forums, sources
+    return definition, notes, forums, sources, seotud_relations
+
 
 # Vastete plokk
 def xp_to_words(a_element, sources_with_ids):
@@ -450,7 +447,6 @@ def xp_to_words(a_element, sources_with_ids):
             ))
 
     return words, definitions, sources_from_xp
-
 
 
 def ter_word(sources_with_ids, a_element):
