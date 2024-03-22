@@ -3,41 +3,30 @@ import json
 
 def get_source_id_by_name(name):
     sources = {
-    "PGS": 1,
-    "Bloom": 2,
-    "PED-TERM": 3,
-    "TESE": 4,
-    "ISO": 5,
-    "Kraav": 6,
-    "Hirsjärvi": 7,
-    "EKSS": 8,
-    "ÕS": 9,
-    "akad. kraadid": 10,
-    "rmt-kogu": 11,
-    "VL 2006": 12,
-    "HP": 13,
-    "Vallaste": 14,
-    "Smith": 15,
-    "Laanemäe": 16,
-    "TEST": 17,
-    "AKS": 18,
-    "ÕK": 19,
-    "ANDR": 20,
-    "Krull": 21,
-    "HTS": 22,
-    "Koort": 23,
-    "Dict of Psychol": 24,
-    "Vääri": 25,
-    "VL": 26,
-    "E(N)E": 27,
-    "Erelt": 28,
-    "Koemets": 29,
-    "Raili Pool": 30,
-    "Good ja Power": 31,
-    "ERIP": 32
-}
-    #return sources.get(name, "Unknown Source")
-    return 121611
+        "EVÕSS": 16733,
+        "Salumaa 2008": 22637,
+        "Wikipedia": 19621,
+        "Britannica": 19250,
+        "EKRL": 16734,
+        "SPL": 16679,
+        "VL": 22967,
+        "Salo 2000": 22611,
+        "TEA": 22698,
+        "HarperCollins": 22622,
+        "LThK 1993": 22663,
+        "New Advent": 22621,
+        "ПЭ": 22973,
+        "EncChr": 22918,
+        "Riistan 2011": 22969,
+        "Blackwell": 22970,
+        "Day": 22971,
+        "BibleGateway": 22972,
+        "BERTA": 19301,
+        "Grenz": 22974,
+        "CARM": 22975
+    }
+
+    return sources.get(name, 63838)
 
 def map_lang_codes(lang_code_xml):
     codes = {

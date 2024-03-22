@@ -42,6 +42,16 @@ def parse_xml(file_path):
                 }
                 domains.append(domain)
 
+            # Konfessioon
+            for k_element in a_element.findall('.//x:konf', ns):
+                note_value = k_element.text
+                notes.append(data_classes.Note(
+                    value=note_value,
+                    lang='est',
+                    publicity=True,
+                    sourceLinks=[]
+                ))
+
             # Toimetaja
             for editor in a_element.findall('.//x:T', ns):
                 notes.append(data_classes.Note(
@@ -87,7 +97,7 @@ def parse_xml(file_path):
             foreign_words, foreign_definitions = xp_to_words(a_element)
 
             for w in foreign_words:
-                if w.value:
+                if w.valuePrese:
                     words.append(w)
 
             for d in foreign_definitions:
@@ -127,7 +137,7 @@ def tg_def_definition(tg_element):
         for all_element in dg_element.findall('./x:all', ns):
             source_value = all_element.text
             sourcelink = data_classes.Sourcelink(
-                sourceId=121611,
+                sourceId=xml_helpers.get_source_id_by_name(source_value),
                 value=source_value,
                 name='')
             sourcelinks.append(sourcelink)
@@ -282,16 +292,16 @@ def xp_to_words(a_element):
                     else:
                         valuestatecode = None
 
-            for xlyh_element in xg_element.findall('./x:xlyh', ns):
-                words.append(data_classes.Word(
-                    value=xlyh_element.text,
-                    lang=xml_helpers.map_lang_codes(lang),
-                    lexemePublicity=True,
-                    lexemeValueStateCode=valuestatecode,
-                    wordTypeCodes=["l"],
-                    lexemeNotes=lexemenotes,
-                    lexemeSourceLinks=word_sourcelinks
-                ))
+            # for xlyh_element in xg_element.findall('./x:xlyh', ns):
+            #     words.append(data_classes.Word(
+            #         valuePrese=xlyh_element.text,
+            #         lang=xml_helpers.map_lang_codes(lang),
+            #         lexemePublicity=True,
+            #         lexemeValueStateCode=valuestatecode,
+            #         wordTypeCodes=["l"],
+            #         lexemeNotes=lexemenotes,
+            #         lexemeSourceLinks=word_sourcelinks
+            #     ))
 
             # Kaudtõlge
             for xqd_element in xg_element.findall('./x:xqd', ns):
@@ -352,15 +362,16 @@ def xp_to_words(a_element):
                         publicity=True,
                         sourceLinks=sourcelinks
                     ))
-                # Vormikood
-                for xvk_element in xgrg_element.findall('./x:xvk', ns):
-                    xvl = xvk_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Vormikood: ' + xvl,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
+                # # Vormikood
+                # for xvk_element in xgrg_element.findall('./x:xvk', ns):
+                #     xvl = xvk_element.text
+                #     lexemenotes.append(data_classes.Lexemenote(
+                #         value='Vormikood: ' + xvl,
+                #         lang=xml_helpers.map_lang_codes(lang),
+                #         publicity=True,
+                #         sourceLinks=sourcelinks
+                #     ))
+
                 # Sõnaliik
                 for xsl_element in xgrg_element.findall('./x:xsl', ns):
                     xsl = xsl_element.text
@@ -399,7 +410,7 @@ def xp_to_words(a_element):
                     ))
 
             words.append(data_classes.Word(
-                value=lexemevalue,
+                valuePrese=lexemevalue,
                 lang=xml_helpers.map_lang_codes(lang),
                 lexemePublicity=True,
                 lexemeValueStateCode=valuestatecode,
@@ -424,7 +435,6 @@ def ter_word(a_element):
         etym_element = terg_element.find('.//x:etym', ns)
         lang = xml_helpers.map_lang_codes(etym_element.text) if etym_element is not None else "est"
 
-
         valuestatecode = None
         sourcelinks = []
         lexemenotes = []
@@ -433,13 +443,22 @@ def ter_word(a_element):
         for ter_element in terg_element.findall('./x:ter', ns):
             value = ter_element.text
 
-            # Vaste liik
-            liik = ter_element.attrib.get(f'{{{ns["x"]}}}liik', '')
-            if liik:
-                if liik == 'l':
-                    wordtypecodes.append(liik)
-                elif liik == 'z':
-                    wordtypecodes.append(liik)
+        tall_element = terg_element.find('./x:tall', ns)
+        if tall_element is not None:
+            tall_value = tall_element.text
+            sourcelinks.append(data_classes.Sourcelink(
+                sourceId=xml_helpers.get_source_id_by_name(tall_value),
+                value=tall_value,
+                name=None
+            ))
+
+            # # Vaste liik
+            # liik = ter_element.attrib.get(f'{{{ns["x"]}}}liik', '')
+            # if liik:
+            #     if liik == 'l':
+            #         wordtypecodes.append(liik)
+            #     elif liik == 'z':
+            #         wordtypecodes.append(liik)
 
             # Vaste tüüp
             tyyp = ter_element.attrib.get(f'{{{ns["x"]}}}tyyp', '')
@@ -454,16 +473,17 @@ def ter_word(a_element):
                 for ekeel in etgg.findall('./x:ekeel', ns):
                     ekeel_value = ekeel.text
                 for ex in etgg.findall('./x:ex', ns):
-                    ex_value = ex.text
+                    ex_value = '<eki-foreign>' + ex.text + '</eki-foreign>'
                 for ed in etgg.findall('./x:ed', ns):
-                    ed_value = ed.text
+                    ed_value = "'" + ed.text + "'"
                 for etvk in etgg.findall('./x:etvk', ns):
-                    etvk_value = etvk.text
+                    etvk_value = '(' + etvk.text + ')'
             for ek in etg.findall('./x:ek', ns):
                 ek_value = ek.text
 
             etymology_values = [value for value in [ekeel_value, ex_value, ek_value, ed_value, etvk_value] if value]
-            etymology_string = ', '.join(etymology_values)
+
+            etymology_string = ' '.join(etymology_values)
 
             if etymology_values:
                 lexemenote = data_classes.Lexemenote(
@@ -474,22 +494,22 @@ def ter_word(a_element):
                 )
                 lexemenotes.append(lexemenote)
 
-        for h in terg_element.findall('./x:hld', ns):
-            lexemenote = data_classes.Lexemenote(
-                value='Hääldus: ' + h.text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            )
-            lexemenotes.append(lexemenote)
+        # for h in terg_element.findall('./x:hld', ns):
+        #     lexemenote = data_classes.Lexemenote(
+        #         value='Hääldus: ' + h.text,
+        #         lang='est',
+        #         publicity=True,
+        #         sourceLinks=[]
+        #     )
+        #     lexemenotes.append(lexemenote)
 
         # Eestikeelse termini allikaviide
         for all_element in terg_element.findall('./x:all', ns):
             source_value = all_element.text
-            sourcelink = data_classes.Sourcelink(sourceId=121611, value=source_value, name='')
+            sourcelink = data_classes.Sourcelink(sourceId=xml_helpers.get_source_id_by_name(source_value), value=source_value, name='')
             sourcelinks.append(sourcelink)
 
-        word = data_classes.Word(value=value,
+        word = data_classes.Word(valuePrese=value,
                                  lang=lang,
                                  lexemePublicity=True,
                                  lexemeValueStateCode=valuestatecode,
