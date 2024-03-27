@@ -21,7 +21,7 @@ def parse_xml(file_path):
         if a_element.attrib.get(f'{{{ns["x"]}}}as', '') == 'elx':
             continue
         else:
-            public = True
+            public_concept = True
             domains = []
             conceptids = []
             manualEventOn = None
@@ -56,10 +56,11 @@ def parse_xml(file_path):
             for guid in a_element.findall('.//x:G', ns):
                 conceptids.append(guid.text)
 
-            if a_element.findall('.//x:T', ns):
-                public = True
+            if a_element.findall('.//x:TL', ns):
+                public_concept = True
             else:
-                public = False
+                public_concept = False
+                print(guid.text)
 
             for tg_element in a_element.findall('.//x:tg', ns):
                 definition, notes_from_xml, forums_from_xml, links = tg_def_definition(guid.text, tg_element)
@@ -122,6 +123,17 @@ def parse_xml(file_path):
                 forums=forums,
                 words=words
             )
+
+            if public_concept == False:
+                for n in concept.notes:
+                    n.publicity = False
+                for w in concept.words:
+                    w.lexemePublicity = False
+                    for ln in w.lexemeNotes:
+                        ln.publicity = False
+                    for u in w.usages:
+                        u.publicity = False
+
             concepts.append(concept)
 
     return concepts, relation_links
@@ -304,12 +316,8 @@ def xp_to_words(a_element):
             # Stiil
             for s_element in xg_element.findall('./x:s', ns):
                 if s_element.text:
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Stiil: ' + s_element.text,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
+                    if s_element.text == 'van':
+                        valuestatecode = 'vananenud'
 
             # Märkus
             for co_element in xg_element.findall('./x:co', ns):
@@ -426,13 +434,15 @@ def ter_word(a_element):
         lexemenotes = []
         wordtypecodes = []
 
-
-
+        # Termin ja väärtusolek
         for ter_element in terg_element.findall('./x:ter', ns):
             value = ter_element.text
+            tyyp_value = ter_element.get('{' + ns['x'] + '}tyyp')
+            if tyyp_value == 'ee':
+                valuestatecode = 'eelistatud'
 
+        # Konfessioon
         for k_element in terg_element.findall('.//x:konf', ns):
-            print('KONFESSIOON: ' + k_element.text + value)
             lexemenotes.append(data_classes.Lexemenote(
                 value=k_element.text,
                 lang='est',
