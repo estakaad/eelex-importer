@@ -69,6 +69,17 @@ def map_lang_acronyms(code):
 
     return codes.get(code, "unknown")
 
+def find_guid_for_words(concepts, relation_links):
+    relation_links_with_all_guids = []
+    for rl in relation_links:
+        for c in concepts:
+            for w in c.words:
+                if rl[1] == w.valuePrese:
+                    relation_links_with_all_guids.append((rl[0], c.conceptIds[0]))
+
+    return relation_links_with_all_guids
+
+
 def write_dicts_to_json_file(dicts_list, file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         dicts_to_serialize = [asdict(obj) for obj in dicts_list]

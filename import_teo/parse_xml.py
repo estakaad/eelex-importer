@@ -15,11 +15,13 @@ def parse_xml(file_path):
     root = tree.getroot()
 
     concepts = []
+    relation_links = []
 
     for a_element in root.findall('.//x:A', ns):
         if a_element.attrib.get(f'{{{ns["x"]}}}as', '') == 'elx':
             continue
         else:
+            public = True
             domains = []
             conceptids = []
             manualEventOn = None
@@ -61,8 +63,20 @@ def parse_xml(file_path):
                     sourceLinks=[]
                 ))
 
+            for guid in a_element.findall('.//x:G', ns):
+                conceptids.append(guid.text)
+
+            if a_element.findall('.//x:T', ns):
+                public = True
+            else:
+                public = False
+
             for tg_element in a_element.findall('.//x:tg', ns):
-                definition, notes_from_xml, forums_from_xml = tg_def_definition(tg_element)
+                definition, notes_from_xml, forums_from_xml, links = tg_def_definition(guid.text, tg_element)
+
+                if links:
+                    for l in links:
+                        relation_links.append(l)
 
                 if definition:
                     definitions.append(definition)
@@ -120,16 +134,17 @@ def parse_xml(file_path):
             )
             concepts.append(concept)
 
-    return concepts
+    return concepts, relation_links
 
 
 # Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
-def tg_def_definition(tg_element):
+def tg_def_definition(guid, tg_element):
     def_value = None
     definition = None
     notes = []
     sourcelinks = []
     forums = []
+    links = []
 
     for dg_element in tg_element.findall('./x:dg', ns):
         for def_element in dg_element.findall('./x:def', ns):
@@ -151,6 +166,7 @@ def tg_def_definition(tg_element):
             ))
         for ng_element in dg_element.findall('./x:ng', ns):
             for nall_element in ng_element.findall('./x:nall', ns):
+                #print(nall_element.text)
                 sourcelink = data_classes.Sourcelink(
                     sourceId=xml_helpers.get_source_id_by_name(nall_element.text),
                     value=nall_element.text,
@@ -197,31 +213,16 @@ def tg_def_definition(tg_element):
             ))
 
     # Edasiviited
-    evts_vrd = []
     evts_vt_ka = []
 
     for evt_element in tg_element.findall('./x:evt', ns):
         evt_value = evt_element.text if evt_element.text is not None else ""
         evt_attrib_value = evt_element.attrib.get(f'{{{ns["x"]}}}evtl', '')
 
-        if evt_attrib_value == "vrd":
-            if evt_value:
-                evts_vrd.append(evt_value)
-        elif evt_attrib_value == "vt ka":
+        if evt_attrib_value == "vt ka":
             if evt_value:
                 evts_vt_ka.append(evt_value)
-
-    if evts_vrd:
-        combined_evts_vrd = ', '.join(evts_vrd)
-        notes_value_vrd = f"Vrd: {combined_evts_vrd}"
-
-        note_vrd = data_classes.Note(
-            value=notes_value_vrd,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vrd)
+                links.append((guid, evt_value))
 
     if evts_vt_ka:
         combined_evts_vt_ka = ', '.join(evts_vt_ka)
@@ -255,7 +256,7 @@ def tg_def_definition(tg_element):
             definitionTypeCode='definitsioon',
             sourceLinks=[])
 
-    return definition, notes, forums
+    return definition, notes, forums, links
 
 # Vastete plokk
 def xp_to_words(a_element):
