@@ -69,6 +69,27 @@ def map_lang_acronyms(code):
 
     return codes.get(code, "unknown")
 
+
+def map_domain_to_lenoch_code(domain):
+    names = {
+        "dogmaatika": "RP51",
+        "filosoofia": "RP",
+        "kirikuarhitektuur": "RP72",
+        "kirikukorraldus": "RP23",
+        "kirikulugu": "RPD",
+        "kirikumuusika": "RPC1",
+        "kirikuõigus": "RPJ",
+        "kristlik kunst": "RP71",
+        "liturgika": "RPC2",
+        "piibliteadus": "RP6",
+        "religioonisotsioloogia": "RPE1",
+        "teoloogia": "RP5",
+        "Kristoloogia": "RP52"
+    }
+
+    return names.get(domain, "unknown")
+
+
 def find_guid_for_words(concepts, relation_links):
     relation_links_with_all_guids = []
     for rl in relation_links:

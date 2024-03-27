@@ -36,11 +36,9 @@ def parse_xml(file_path):
             # Valdkonnad
             for v_element in a_element.findall('.//x:v', ns):
                 d_domain = v_element.text
-                #d_domain = 'ED1'
-                d_origin = 'lenoch'
                 domain = {
-                    'code': d_domain,
-                    'origin': d_origin
+                    'code': xml_helpers.map_domain_to_lenoch_code(d_domain),
+                    'origin': 'lenoch'
                 }
                 domains.append(domain)
 
@@ -60,7 +58,6 @@ def parse_xml(file_path):
                 public_concept = True
             else:
                 public_concept = False
-                print(guid.text)
 
             for tg_element in a_element.findall('.//x:tg', ns):
                 definition, notes_from_xml, forums_from_xml, links = tg_def_definition(guid.text, tg_element)
@@ -225,18 +222,6 @@ def tg_def_definition(guid, tg_element):
             if evt_value:
                 evts_vt_ka.append(evt_value)
                 links.append((guid, evt_value))
-
-    if evts_vt_ka:
-        combined_evts_vt_ka = ', '.join(evts_vt_ka)
-        notes_value_vt_ka = f"Vt ka: {combined_evts_vt_ka}"
-
-        note_vt_ka = data_classes.Note(
-            value=notes_value_vt_ka,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vt_ka)
 
     # Sisemärkus
     forum = None
