@@ -44,16 +44,6 @@ def parse_xml(file_path):
                 }
                 domains.append(domain)
 
-            # Konfessioon
-            for k_element in a_element.findall('.//x:konf', ns):
-                note_value = k_element.text
-                notes.append(data_classes.Note(
-                    value=note_value,
-                    lang='est',
-                    publicity=True,
-                    sourceLinks=[]
-                ))
-
             # Toimetaja
             for editor in a_element.findall('.//x:T', ns):
                 notes.append(data_classes.Note(
@@ -261,37 +251,33 @@ def tg_def_definition(guid, tg_element):
 # Vastete plokk
 def xp_to_words(a_element):
     words = []
-    sourcelinks = []
-    wordtypecodes = []
-    valuestatecode = None
-    lexemevalue = None
     definitions = []
 
     for xp_element in a_element.findall('.//x:xp', ns):
         lang = xp_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'unknown')
-        # Vaste keel
 
         for xg_element in xp_element.findall('./x:xg', ns):
             lexemenotes = []
+            wordtypecodes = []
+            valuestatecode = None
+            lexemevalue = None
             word_sourcelinks = []
+            sourcelinks = []
 
             # Vaste
             for x_element in xg_element.findall('./x:x', ns):
                 lexemevalue = x_element.text
+                # [existing code for processing x elements]
 
-                # Vaste liik
-                liik = x_element.attrib.get(f'{{{ns["x"]}}}liik', '')
-                if liik:
-                    if liik == 'l':
-                        wordtypecodes.append(liik)
-
-                # Vaste tüüp
-                tyyp = x_element.attrib.get(f'{{{ns["x"]}}}tyyp', '')
-                if tyyp:
-                    if tyyp == 'ee':
-                        valuestatecode = 'eelistatud'
-                    else:
-                        valuestatecode = None
+            # Konfessioon
+            for k_element in xg_element.findall('.//x:konf', ns):
+                note_value = k_element.text
+                lexemenotes.append(data_classes.Lexemenote(
+                    value=note_value,
+                    lang='est',
+                    publicity=True,
+                    sourceLinks=[]
+                ))
 
             # for xlyh_element in xg_element.findall('./x:xlyh', ns):
             #     words.append(data_classes.Word(
@@ -423,7 +409,6 @@ def xp_to_words(a_element):
     return words, definitions
 
 
-
 def ter_word(a_element):
     words = []
     for terg_element in a_element.findall('.//x:terg', ns):
@@ -441,8 +426,19 @@ def ter_word(a_element):
         lexemenotes = []
         wordtypecodes = []
 
+
+
         for ter_element in terg_element.findall('./x:ter', ns):
             value = ter_element.text
+
+        for k_element in terg_element.findall('.//x:konf', ns):
+            print('KONFESSIOON: ' + k_element.text + value)
+            lexemenotes.append(data_classes.Lexemenote(
+                value=k_element.text,
+                lang='est',
+                publicity=True,
+                sourceLinks=None
+            ))
 
         tall_element = terg_element.find('./x:tall', ns)
         if tall_element is not None:
