@@ -275,7 +275,18 @@ def xp_to_words(a_element):
             # Vaste
             for x_element in xg_element.findall('./x:x', ns):
                 lexemevalue = x_element.text
-                # [existing code for processing x elements]
+
+            for xlyh_element in xg_element.findall('./x:xlyh', ns):
+                words.append(data_classes.Word(
+                    valuePrese=xlyh_element.text,
+                    lang=xml_helpers.map_lang_codes(lang),
+                    lexemeValueStateCode=None,
+                    lexemePublicity=True,
+                    wordTypeCodes=['l'],
+                    usages=[],
+                    lexemeNotes=[],
+                    lexemeSourceLinks=[]
+                ))
 
             # Konfessioon
             for k_element in xg_element.findall('.//x:konf', ns):
@@ -287,16 +298,7 @@ def xp_to_words(a_element):
                     sourceLinks=[]
                 ))
 
-            # for xlyh_element in xg_element.findall('./x:xlyh', ns):
-            #     words.append(data_classes.Word(
-            #         valuePrese=xlyh_element.text,
-            #         lang=xml_helpers.map_lang_codes(lang),
-            #         lexemePublicity=True,
-            #         lexemeValueStateCode=valuestatecode,
-            #         wordTypeCodes=["l"],
-            #         lexemeNotes=lexemenotes,
-            #         lexemeSourceLinks=word_sourcelinks
-            #     ))
+
 
             # Kaudtõlge
             for xqd_element in xg_element.findall('./x:xqd', ns):
@@ -444,6 +446,17 @@ def ter_word(a_element):
             if tyyp_value == 'ee':
                 valuestatecode = 'eelistatud'
 
+        for lyh_element in terg_element.findall('./x:lyh', ns):
+            words.append(data_classes.Word(
+                valuePrese=lyh_element.text,
+                lang=lang,
+                lexemeValueStateCode=None,
+                lexemePublicity=True,
+                wordTypeCodes=['l'],
+                usages=[],
+                lexemeNotes=[],
+                lexemeSourceLinks=[]
+            ))
         # Konfessioon
         for k_element in terg_element.findall('.//x:konf', ns):
             lexemenotes.append(data_classes.Lexemenote(
