@@ -62,7 +62,7 @@ def parse_xml(file_path):
                 public_concept = False
 
             for tg_element in a_element.findall('.//x:tg', ns):
-                definition, notes_from_xml, forums_from_xml, links = tg_def_definition(guid.text, tg_element)
+                definition, notes_from_xml, forums_from_xml, links, usages = tg_def_definition(guid.text, tg_element)
 
                 if links:
                     for l in links:
@@ -96,6 +96,12 @@ def parse_xml(file_path):
             for w in ter_word(a_element):
                 words.append(w)
 
+            if usages:
+                for w in words:
+                    if w.lexemeValueStateCode == 'eelistatud':
+                        print(usages)
+                        w.usages=usages
+
             # Võõrkeelsed vasted
 
             foreign_words, foreign_definitions = xp_to_words(a_element)
@@ -107,6 +113,7 @@ def parse_xml(file_path):
             for d in foreign_definitions:
                 if d.value:
                     definitions.append(d)
+
 
             # Koosta mõiste objekt
             concept = data_classes.Concept(
@@ -146,6 +153,7 @@ def tg_def_definition(guid, tg_element):
     sourcelinks = []
     forums = []
     links = []
+    usages = []
 
     for dg_element in tg_element.findall('./x:dg', ns):
         for def_element in dg_element.findall('./x:def', ns):
@@ -174,10 +182,11 @@ def tg_def_definition(guid, tg_element):
                     name=''
                 )
                 usage_sourcelinks.append(sourcelink)
+
             for n_element in ng_element.findall('./x:n', ns):
 
                 n_value = n_element.text
-                notes.append(data_classes.Note(
+                usages.append(data_classes.Usage(
                     value=n_value,
                     lang='est',
                     publicity=True,
@@ -246,7 +255,7 @@ def tg_def_definition(guid, tg_element):
             definitionTypeCode='definitsioon',
             sourceLinks=[])
 
-    return definition, notes, forums, links
+    return definition, notes, forums, links, usages
 
 # Vastete plokk
 def xp_to_words(a_element):
