@@ -84,7 +84,14 @@ def map_domain_to_lenoch_code(domain):
         "piibliteadus": "RP6",
         "religioonisotsioloogia": "RPE1",
         "teoloogia": "RP5",
-        "Kristoloogia": "RP52"
+        "kristoloogia": "RP52",
+        "anglikaani": "RP94",
+        "baptisti": "RP97",
+        "katoliku": "RP93",
+        "luteri": "RP95",
+        "reformeeritud": "RP96",
+        "vanaida": "RP92",
+        "õigeusu": "RP92"
     }
 
     return names.get(domain, "unknown")

@@ -36,11 +36,13 @@ def parse_xml(file_path):
             # Valdkonnad
             for v_element in a_element.findall('.//x:v', ns):
                 d_domain = v_element.text
-                domain = {
-                    'code': xml_helpers.map_domain_to_lenoch_code(d_domain),
-                    'origin': 'lenoch'
-                }
-                domains.append(domain)
+                code = xml_helpers.map_domain_to_lenoch_code(d_domain)
+                if code != 'unknown':
+                    domain = {
+                        'code': code,
+                        'origin': 'lenoch'
+                    }
+                    domains.append(domain)
 
             # Toimetaja
             for editor in a_element.findall('.//x:T', ns):
@@ -164,23 +166,24 @@ def tg_def_definition(guid, tg_element):
                 sourceLinks=sourcelinks
             ))
         for ng_element in dg_element.findall('./x:ng', ns):
+            usage_sourcelinks = []
             for nall_element in ng_element.findall('./x:nall', ns):
-                #print(nall_element.text)
                 sourcelink = data_classes.Sourcelink(
                     sourceId=xml_helpers.get_source_id_by_name(nall_element.text),
                     value=nall_element.text,
                     name=''
                 )
+                usage_sourcelinks.append(sourcelink)
             for n_element in ng_element.findall('./x:n', ns):
 
                 n_value = n_element.text
-
                 notes.append(data_classes.Note(
                     value=n_value,
                     lang='est',
                     publicity=True,
-                    sourceLinks=[sourcelink] if sourcelinks else []
+                    sourceLinks=usage_sourcelinks
                 ))
+
         for dn_element in dg_element.findall('./x:dn', ns):
             notes.append(data_classes.Note(
                 value=dn_element.text,
@@ -303,6 +306,13 @@ def xp_to_words(a_element):
                 if s_element.text:
                     if s_element.text == 'van':
                         valuestatecode = 'vananenud'
+                    else:
+                        lexemenotes.append(data_classes.Lexemenote(
+                            value=s_element.text,
+                            lang='est',
+                            publicity=False,
+                            sourceLinks=None
+                        ))
 
             # Märkus
             for co_element in xg_element.findall('./x:co', ns):
@@ -494,6 +504,18 @@ def ter_word(a_element):
         #         sourceLinks=[]
         #     )
         #     lexemenotes.append(lexemenote)
+
+        for s in terg_element.findall('./x:s', ns):
+            print(s.text)
+            if s.text == 'van':
+                valuestatecode = 'vananenud'
+            else:
+                lexemenotes.append(data_classes.Lexemenote(
+                    value=s.text,
+                    lang='est',
+                    publicity=False,
+                    sourceLinks=None
+                ))
 
         # Eestikeelse termini allikaviide
         for all_element in terg_element.findall('./x:all', ns):
