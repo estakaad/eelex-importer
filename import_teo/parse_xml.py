@@ -99,7 +99,6 @@ def parse_xml(file_path):
             if usages:
                 for w in words:
                     if w.lexemeValueStateCode == 'eelistatud':
-                        print(usages)
                         w.usages=usages
 
             # Võõrkeelsed vasted
@@ -515,7 +514,6 @@ def ter_word(a_element):
         #     lexemenotes.append(lexemenote)
 
         for s in terg_element.findall('./x:s', ns):
-            print(s.text)
             if s.text == 'van':
                 valuestatecode = 'vananenud'
             else:
