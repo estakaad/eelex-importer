@@ -1,7 +1,37 @@
 from dataclasses import asdict
 import json
 
-def get_source_id_by_name(name):
+
+def normalize_text(input_text):
+    if input_text is None:
+        return ''
+    return input_text.replace('\\"', '"').replace('\\', '').replace('  ', ' ')
+
+
+def get_source_id_by_name(name, sources_with_ids):
+    normalized_name = normalize_text(name)
+
+    start_index_of_lk = normalized_name.find('lk ')
+    start_index_of_par = normalized_name.find(' par ')
+
+    if start_index_of_lk != -1:
+        inner_name = normalized_name[start_index_of_lk:].strip(' ').strip('.')
+        #print(normalized_name + ' - ' + inner_name)
+    elif start_index_of_par != -1:
+        inner_name = normalized_name[start_index_of_par:].strip(' ').strip('.')
+        #print(normalized_name + ' - ' + inner_name)
+    elif 'KKK, ' in normalized_name:
+        inner_name = normalized_name.replace('KKK, ', '')
+        #print(normalized_name + ' - ' + inner_name)
+    elif 'KKK kompendium, ' in normalized_name:
+        inner_name = normalized_name.replace('KKK kompendium, ', '')
+        #print(normalized_name + ' - ' + inner_name)
+    elif 'XXII pt' in normalized_name:
+        inner_name = '22. ptk'
+        #print(normalized_name + ' - ' + inner_name)
+    else:
+        inner_name = ''
+
     sources = {
         "EVÕSS": 16733,
         "Salumaa 2008": 22637,
@@ -23,10 +53,17 @@ def get_source_id_by_name(name):
         "BibleGateway": 22972,
         "BERTA": 19301,
         "Grenz": 22974,
-        "CARM": 22975
+        "CARM": 22975,
+        "EKSS": None
     }
 
-    return sources.get(name, 63838)
+    if normalized_name in sources:
+        source_id = sources[normalized_name]
+    else:
+        source_id = next((item['sourceId'] for item in sources_with_ids if normalize_text(item['allikaviide_eelexis']) == normalized_name), 63838)
+
+    return int(source_id) if source_id is not None else None, str(inner_name)
+
 
 def map_lang_codes(lang_code_xml):
     codes = {

@@ -10,7 +10,7 @@ ns = {
 }
 
 # Function to parse XML and create Concept objects
-def parse_xml(file_path):
+def parse_xml(file_path, sources_data):
     tree = ET.parse(file_path)
     root = tree.getroot()
 
@@ -62,7 +62,7 @@ def parse_xml(file_path):
                 public_concept = False
 
             for tg_element in a_element.findall('.//x:tg', ns):
-                definition, notes_from_xml, forums_from_xml, links, usages = tg_def_definition(guid.text, tg_element)
+                definition, notes_from_xml, forums_from_xml, links, usages = tg_def_definition(guid.text, tg_element, sources_data)
 
                 if links:
                     for l in links:
@@ -93,7 +93,7 @@ def parse_xml(file_path):
                 forums.append(forum_item)
 
             # Eestikeelsed terminid
-            for w in ter_word(a_element):
+            for w in ter_word(a_element, sources_data):
                 words.append(w)
 
             if usages:
@@ -103,7 +103,7 @@ def parse_xml(file_path):
 
             # Võõrkeelsed vasted
 
-            foreign_words, foreign_definitions = xp_to_words(a_element)
+            foreign_words, foreign_definitions = xp_to_words(a_element, sources_data)
 
             for w in foreign_words:
                 if w.valuePrese:
@@ -145,7 +145,7 @@ def parse_xml(file_path):
 
 
 # Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
-def tg_def_definition(guid, tg_element):
+def tg_def_definition(guid, tg_element, sources_data):
     def_value = None
     definition = None
     notes = []
@@ -159,11 +159,13 @@ def tg_def_definition(guid, tg_element):
             def_value = def_element.text
         for all_element in dg_element.findall('./x:all', ns):
             source_value = all_element.text
-            sourcelink = data_classes.Sourcelink(
-                sourceId=xml_helpers.get_source_id_by_name(source_value),
-                value=source_value,
-                name='')
-            sourcelinks.append(sourcelink)
+            source_id, inner_name = xml_helpers.get_source_id_by_name(source_value, sources_data)
+            if source_id is not None:
+                sourcelink = data_classes.Sourcelink(
+                    sourceId=source_id,
+                    value=source_value,
+                    name=inner_name)
+                sourcelinks.append(sourcelink)
         for lisa_element in dg_element.findall('./x:lisa', ns):
             lisa_value = lisa_element.text
             notes.append(data_classes.Note(
@@ -175,12 +177,14 @@ def tg_def_definition(guid, tg_element):
         for ng_element in dg_element.findall('./x:ng', ns):
             usage_sourcelinks = []
             for nall_element in ng_element.findall('./x:nall', ns):
-                sourcelink = data_classes.Sourcelink(
-                    sourceId=xml_helpers.get_source_id_by_name(nall_element.text),
-                    value=nall_element.text,
-                    name=''
-                )
-                usage_sourcelinks.append(sourcelink)
+                source_id, inner_name = xml_helpers.get_source_id_by_name(nall_element.text, sources_data)
+                if source_id is not None:
+                    sourcelink = data_classes.Sourcelink(
+                        sourceId=source_id,
+                        value=nall_element.text,
+                        name=inner_name
+                    )
+                    usage_sourcelinks.append(sourcelink)
 
             for n_element in ng_element.findall('./x:n', ns):
 
@@ -257,7 +261,7 @@ def tg_def_definition(guid, tg_element):
     return definition, notes, forums, links, usages
 
 # Vastete plokk
-def xp_to_words(a_element):
+def xp_to_words(a_element, sources_data):
     words = []
     definitions = []
 
@@ -387,7 +391,7 @@ def xp_to_words(a_element):
                     lexemenotes.append(data_classes.Lexemenote(
                         value='Grammatiline sugu: ' + xzde,
                         lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
+                        publicity=False,
                         sourceLinks=sourcelinks
                     ))
                 # Gr sugu (vene)
@@ -396,18 +400,20 @@ def xp_to_words(a_element):
                     lexemenotes.append(data_classes.Lexemenote(
                         value='Grammatiline sugu: ' + xzru,
                         lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
+                        publicity=False,
                         sourceLinks=sourcelinks
                     ))
 
             # Allikas
             for all_element in xg_element.findall('./x:all', ns):
                 if all_element.text:
-                    word_sourcelinks.append(data_classes.Sourcelink(
-                        sourceId=xml_helpers.get_source_id_by_name(all_element.text),
-                        value=all_element.text,
-                        name=''
-                    ))
+                    source_id, inner_name = xml_helpers.get_source_id_by_name(all_element.text, sources_data)
+                    if source_id is not None:
+                        word_sourcelinks.append(data_classes.Sourcelink(
+                            sourceId=source_id,
+                            value=all_element.text,
+                            name=inner_name
+                        ))
 
             words.append(data_classes.Word(
                 valuePrese=lexemevalue,
@@ -422,7 +428,7 @@ def xp_to_words(a_element):
     return words, definitions
 
 
-def ter_word(a_element):
+def ter_word(a_element, sources_data):
     words = []
     for terg_element in a_element.findall('.//x:terg', ns):
         ekeel_value = ''
@@ -469,11 +475,13 @@ def ter_word(a_element):
         tall_element = terg_element.find('./x:tall', ns)
         if tall_element is not None:
             tall_value = tall_element.text
-            sourcelinks.append(data_classes.Sourcelink(
-                sourceId=xml_helpers.get_source_id_by_name(tall_value),
-                value=tall_value,
-                name=None
-            ))
+            source_id, inner_name = xml_helpers.get_source_id_by_name(tall_value, sources_data)
+            if source_id is not None:
+                sourcelinks.append(data_classes.Sourcelink(
+                    sourceId=source_id,
+                    value=tall_value,
+                    name=inner_name
+                ))
 
             # # Vaste liik
             # liik = ter_element.attrib.get(f'{{{ns["x"]}}}liik', '')
@@ -540,8 +548,10 @@ def ter_word(a_element):
         # Eestikeelse termini allikaviide
         for all_element in terg_element.findall('./x:all', ns):
             source_value = all_element.text
-            sourcelink = data_classes.Sourcelink(sourceId=xml_helpers.get_source_id_by_name(source_value), value=source_value, name='')
-            sourcelinks.append(sourcelink)
+            source_id, inner_name = xml_helpers.get_source_id_by_name(source_value, sources_data)
+            if source_id is not None:
+                sourcelink = data_classes.Sourcelink(sourceId=source_id, value=source_value, name=inner_name)
+                sourcelinks.append(sourcelink)
 
         word = data_classes.Word(valuePrese=value,
                                  lang=lang,
