@@ -1,6 +1,6 @@
 from dataclasses import asdict
 import json
-
+import re
 
 def normalize_text(input_text):
     if input_text is None:
@@ -9,26 +9,48 @@ def normalize_text(input_text):
 
 
 def get_source_id_by_name(name, sources_with_ids):
-    normalized_name = normalize_text(name)
+    normalized_name = normalize_text(name).strip().strip('.')
 
-    start_index_of_lk = normalized_name.find('lk ')
+    start_index_of_lk = normalized_name.find(' lk ')
     start_index_of_par = normalized_name.find(' par ')
 
     if start_index_of_lk != -1:
-        inner_name = normalized_name[start_index_of_lk:].strip(' ').strip('.')
-        #print(normalized_name + ' - ' + inner_name)
+        if bool(re.search(r'\d$', normalized_name)):
+            inner_name = normalized_name[start_index_of_lk:].strip(' ').strip('.')
+        elif 'lk 338' in normalized_name:
+            inner_name = 'lk 338'
+        elif 'lk 99' in normalized_name:
+            inner_name = 'lk 99'
+        elif 'lk 95' in normalized_name:
+            inner_name = 'lk 95'
+        elif 'lk 4' in normalized_name:
+            inner_name = 'lk 4'
     elif start_index_of_par != -1:
         inner_name = normalized_name[start_index_of_par:].strip(' ').strip('.')
-        #print(normalized_name + ' - ' + inner_name)
     elif 'KKK, ' in normalized_name:
-        inner_name = normalized_name.replace('KKK, ', '')
-        #print(normalized_name + ' - ' + inner_name)
+        inner_name = 'p ' + normalized_name.replace('KKK, ', '')
     elif 'KKK kompendium, ' in normalized_name:
-        inner_name = normalized_name.replace('KKK kompendium, ', '')
-        #print(normalized_name + ' - ' + inner_name)
+        inner_name = 'p ' + normalized_name.replace('KKK kompendium, ', '')
     elif 'XXII pt' in normalized_name:
         inner_name = '22. ptk'
-        #print(normalized_name + ' - ' + inner_name)
+    elif '§' in normalized_name:
+        if '§482' in normalized_name:
+            inner_name = '§ 482'
+        elif '§3.3.3' in normalized_name:
+            inner_name = '§ 3.3.3'
+        elif '§14' in normalized_name:
+            inner_name = '§ 14'
+    elif 'Kiriku laulu- ja palveraamat' in normalized_name:
+        if ' 195' in normalized_name:
+            inner_name = 'Laul 195'
+        elif ' 138' in normalized_name:
+            inner_name = 'Laul 138'
+        elif ' 93' in normalized_name:
+            inner_name = 'Laul 93'
+        elif ' 355' in normalized_name:
+            inner_name = 'Laul 355'
+        elif ' 142' in normalized_name:
+            inner_name = 'Laul 142'
     else:
         inner_name = ''
 
@@ -62,7 +84,7 @@ def get_source_id_by_name(name, sources_with_ids):
     else:
         source_id = next((item['sourceId'] for item in sources_with_ids if normalize_text(item['allikaviide_eelexis']) == normalized_name), 63838)
 
-    return int(source_id) if source_id is not None else None, str(inner_name)
+    return source_id, inner_name
 
 
 def map_lang_codes(lang_code_xml):
