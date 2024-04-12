@@ -129,8 +129,7 @@ def parse_xml(file_path, sources_data, dataset_code):
                 words=words
             )
 
-            if public_concept == False:
-                print(concept)
+            if not public_concept:
                 for n in concept.notes:
                     n.publicity = False
                 for w in concept.words:
@@ -179,6 +178,7 @@ def tg_def_definition(guid, tg_element, sources_data):
             usage_sourcelinks = []
             for nall_element in ng_element.findall('./x:nall', ns):
                 source_id, inner_name = xml_helpers.get_source_id_by_name(nall_element.text, sources_data)
+                print(nall_element.text)
                 if source_id is not None:
                     sourcelink = data_classes.Sourcelink(
                         sourceId=source_id,

@@ -10,7 +10,7 @@ prettified_xml_file_path = "__sr/teo/teo1_prettified.xml"
 output_json_file_path = '__sr/teo/teo1.json'
 concepts_with_ids = 'files/concepts_saved.json'
 meaning_relations_file_path = 'files/meaning_relations_output.json'
-dataset_code = 'usu-12-04'
+dataset_code = 'usu-1204'
 
 #helpers.beautify_xml(input_xml_file_path, prettified_xml_file_path)
 
@@ -24,8 +24,8 @@ with open(sources_with_ids, 'r', encoding='utf-8') as file:
 concepts, relation_links = parse_xml.parse_xml(prettified_xml_file_path, sources_data, dataset_code)
 #
 # # WRITE CONCEPTS TO JSON FILE
-# # xml_helpers.write_dicts_to_json_file(concepts, output_json_file_path)
-#
+xml_helpers.write_dicts_to_json_file(concepts, output_json_file_path)
+
 # # MEANING RELATIONS WITH GUIDS INSTEAD OF MEANING_IDS
 # relation_links_with_all_guids = xml_helpers.find_guid_for_words(concepts, relation_links)
 # concepts_data = xml_helpers.load_json_data(concepts_with_ids)
