@@ -167,6 +167,38 @@ def find_guid_for_words(concepts, relation_links):
     return relation_links_with_all_guids
 
 
+def guid_pairs_to_meaning_relations_as_json(relation_links_with_all_guids, guid_to_meaningid):
+    relations_list = []
+    for t in relation_links_with_all_guids:
+        try:
+            relations_list.append({
+                "meaningId": guid_to_meaningid[t[0]],
+                "targetMeaningId": guid_to_meaningid[t[1]],
+                "relationTypeCode": "seotud mõiste",
+                "oppositeRelationTypeCode": "seotud mõiste"
+            })
+        except KeyError as e:
+            print(f"Warning: No mapping found for GUID {e.args[0]}")
+    return relations_list
+
+
+def load_json_data(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return json.load(file)
+
+
+def create_guid_to_meaningid_mapping(data):
+    mapping = {}
+    for item in data:
+        for guid in item['conceptIds']:
+            mapping[guid] = item['id']
+    return mapping
+
+
+def write_meaning_relation_dicts_to_json_file(dicts_list, file_path):
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(dicts_list, f, ensure_ascii=False, indent=4)
+
 def write_dicts_to_json_file(dicts_list, file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         dicts_to_serialize = [asdict(obj) for obj in dicts_list]

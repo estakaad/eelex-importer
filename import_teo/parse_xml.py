@@ -10,7 +10,7 @@ ns = {
 }
 
 # Function to parse XML and create Concept objects
-def parse_xml(file_path, sources_data):
+def parse_xml(file_path, sources_data, dataset_code):
     tree = ET.parse(file_path)
     root = tree.getroot()
 
@@ -116,7 +116,7 @@ def parse_xml(file_path, sources_data):
 
             # Koosta mõiste objekt
             concept = data_classes.Concept(
-                datasetCode='usu-07-12',
+                datasetCode=dataset_code,
                 conceptIds=conceptids,
                 domains=domains,
                 manualEventOn=manualEventOn,
@@ -130,6 +130,7 @@ def parse_xml(file_path, sources_data):
             )
 
             if public_concept == False:
+                print(concept)
                 for n in concept.notes:
                     n.publicity = False
                 for w in concept.words:
