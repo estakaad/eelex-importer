@@ -144,6 +144,20 @@ def parse_xml(file_path, sources_data, dataset_code):
                     print(w.valuePrese)
                     w.valuePrese = w.valuePrese.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
 
+            lang_count = {}
+            for w in concept.words:
+                lang = w.lang
+                if lang in lang_count:
+                    lang_count[lang] += 1
+                else:
+                    lang_count[lang] = 1
+
+            for w in concept.words:
+                if lang_count[w.lang] == 1:
+                    if w.lexemeValueStateCode == 'eelistatud':
+                        print(f"Language: {w.lang}, valuePrese: {w.valuePrese}")
+                        w.lexemeValueStateCode = None
+
             concepts.append(concept)
 
     return concepts, relation_links
