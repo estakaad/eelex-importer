@@ -83,9 +83,7 @@ def get_source_id_by_name(name, sources_with_ids):
         source_id = sources[normalized_name]
     else:
         source_id = next((item['sourceId'] for item in sources_with_ids if normalize_text(item['allikaviide_eelexis'].strip('.')) == normalized_name), 63838)
-    if source_id == 63838:
-        print(normalized_name)
-        print(name)
+    #if source_id == 63838:
 
     return source_id, inner_name
 

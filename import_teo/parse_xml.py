@@ -178,7 +178,6 @@ def tg_def_definition(guid, tg_element, sources_data):
             usage_sourcelinks = []
             for nall_element in ng_element.findall('./x:nall', ns):
                 source_id, inner_name = xml_helpers.get_source_id_by_name(nall_element.text, sources_data)
-                print(nall_element.text)
                 if source_id is not None:
                     sourcelink = data_classes.Sourcelink(
                         sourceId=source_id,
@@ -281,6 +280,9 @@ def xp_to_words(a_element, sources_data):
             for x_element in xg_element.findall('./x:x', ns):
                 lexemevalue = x_element.text
 
+                if x_element.get('{' + ns['x'] + '}liik') == 'z':
+                    wordtypecodes = ["z"]
+
             for xlyh_element in xg_element.findall('./x:xlyh', ns):
                 words.append(data_classes.Word(
                     valuePrese=xlyh_element.text,
@@ -320,7 +322,7 @@ def xp_to_words(a_element, sources_data):
             for s_element in xg_element.findall('./x:s', ns):
                 if s_element.text:
                     if s_element.text == 'van':
-                        valuestatecode = 'vananenud'
+                        valuestatecode = 'endine'
                     else:
                         lexemenotes.append(data_classes.Lexemenote(
                             value=s_element.text,
@@ -439,7 +441,7 @@ def ter_word(a_element, sources_data):
         etvk_value = ''
 
         etym_element = terg_element.find('.//x:etym', ns)
-        lang = xml_helpers.map_lang_codes(etym_element.text) if etym_element is not None else "est"
+        lang = "est"
 
         valuestatecode = None
         sourcelinks = []
@@ -452,6 +454,9 @@ def ter_word(a_element, sources_data):
             tyyp_value = ter_element.get('{' + ns['x'] + '}tyyp')
             if tyyp_value == 'ee':
                 valuestatecode = 'eelistatud'
+
+            if ter_element.get('{' + ns['x'] + '}liik') == 'z':
+                wordtypecodes = ["z"]
 
         for lyh_element in terg_element.findall('./x:lyh', ns):
             words.append(data_classes.Word(
