@@ -10,9 +10,9 @@ prettified_xml_file_path = "__sr/teo/teo1_prettified.xml"
 output_json_file_path = '__sr/teo/teo1.json'
 concepts_with_ids = 'files/concepts_saved.json'
 meaning_relations_file_path = 'files/meaning_relations_output.json'
-dataset_code = 'usu-15-04'
+dataset_code = 'usu-1504'
 
-#helpers.beautify_xml(input_xml_file_path, prettified_xml_file_path)
+helpers.beautify_xml(input_xml_file_path, prettified_xml_file_path)
 
 # LOAD SOURCES
 

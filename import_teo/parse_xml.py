@@ -187,6 +187,8 @@ def tg_def_definition(guid, tg_element, sources_data):
                 sourcelinks.append(sourcelink)
         for lisa_element in dg_element.findall('./x:lisa', ns):
             lisa_value = lisa_element.text
+            if lisa_value:
+                lisa_value = lisa_value.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
             notes.append(data_classes.Note(
                 value=lisa_value,
                 lang='est',
