@@ -563,7 +563,7 @@ def ter_word(a_element, sources_data):
 
         for s in terg_element.findall('./x:s', ns):
             if s.text == 'van':
-                valuestatecode = 'vananenud'
+                valuestatecode = 'endine'
             else:
                 lexemenotes.append(data_classes.Lexemenote(
                     value=s.text,
