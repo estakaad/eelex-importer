@@ -15,7 +15,7 @@ dataset_code = 'usu-1504'
 helpers.beautify_xml(input_xml_file_path, prettified_xml_file_path)
 
 # LOAD SOURCES
-
+#
 sources_with_ids = "files/allikad_uute_id_dega.json"
 with open(sources_with_ids, 'r', encoding='utf-8') as file:
     sources_data = json.load(file)

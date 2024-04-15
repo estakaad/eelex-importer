@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 import data_classes
@@ -157,6 +158,21 @@ def parse_xml(file_path, sources_data, dataset_code):
                     if w.lexemeValueStateCode == 'eelistatud':
                         print(f"Language: {w.lang}, valuePrese: {w.valuePrese}")
                         w.lexemeValueStateCode = None
+
+            # Lühendid lõppu
+            lang_groups = defaultdict(list)
+            for word in words:
+                lang_groups[word.lang].append(word)
+
+            sorted_words = []
+
+            for lang, group in lang_groups.items():
+                without_l = [word for word in group if 'l' not in word.wordTypeCodes]
+                with_l = [word for word in group if 'l' in word.wordTypeCodes]
+                sorted_group = without_l + with_l
+                sorted_words.extend(sorted_group)
+
+            concept.words = sorted_words
 
             concepts.append(concept)
 
