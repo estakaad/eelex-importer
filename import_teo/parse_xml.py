@@ -139,6 +139,11 @@ def parse_xml(file_path, sources_data, dataset_code):
                     for u in w.usages:
                         u.publicity = False
 
+            for w in concept.words:
+                if '&ema;' in w.valuePrese:
+                    print(w.valuePrese)
+                    w.valuePrese = w.valuePrese.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
+
             concepts.append(concept)
 
     return concepts, relation_links
