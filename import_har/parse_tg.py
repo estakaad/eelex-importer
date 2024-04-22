@@ -3,7 +3,8 @@ import sources_helpers
 import xml_helpers
 
 
-# Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
+# Mõiste tähendusgrupp: tg
+# def - Definitsiooniks jmt
 def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict, ns):
     def_value = None
     definition = None
@@ -123,6 +124,3 @@ def tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict, 
         forums.append(forum)
 
     return definition, notes, forums, sources, meaning_relations
-
-
-

@@ -49,3 +49,7 @@ def find_guid_by_term(term, guid_word_dict):
         return None
 
 
+def write_dicts_to_json_file(dicts_list, file_path):
+    with open(file_path, 'w', encoding='utf-8') as f:
+        dicts_to_serialize = [asdict(obj) for obj in dicts_list]
+        json.dump(dicts_to_serialize, f, ensure_ascii=False, indent=4)

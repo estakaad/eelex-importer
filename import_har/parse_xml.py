@@ -15,7 +15,8 @@ ns = {
     'xml': 'http://www.w3.org/XML/1998/namespace'
 }
 
-# Function to parse XML and create Concept objects
+
+# XMLi parsimine, mõistete objektide kokkupanek
 def parse_xml(dataset_code, file_path, sources_file_path):
 
     guid_word_dict = xml_helpers.build_guid_word_dict(file_path)
@@ -71,8 +72,10 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         for editor in a_element.findall('.//h:T', ns):
             manualEventBy = editor.text
 
+        # Mõiste tähendusgrupp
         for tg_element in a_element.findall('.//h:tg', ns):
-            definition, notes_from_xml, forums_from_xml, sources_from_xml, seotud_relations = parse_tg.tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict, ns)
+            definition, notes_from_xml, forums_from_xml, sources_from_xml, seotud_relations = \
+                parse_tg.tg_def_definition(tg_element, sources_with_ids, conceptids, guid_word_dict, ns)
 
             if definition:
                 definitions.append(definition)

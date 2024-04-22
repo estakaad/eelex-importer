@@ -4,8 +4,13 @@ import xml_helpers
 import re
 
 def ter_word(sources_with_ids, a_element, ns):
+
+    # Terminid
     words = []
+    # Mõiste märkused
     concept_notes = []
+
+    # Ühe termini grupid
     for terg_element in a_element.findall('.//h:terg', ns):
         lang = 'est'
         valuestatecode = None
@@ -13,11 +18,12 @@ def ter_word(sources_with_ids, a_element, ns):
         lexemenotes = []
         wordtypecodes = []
 
+        # Termin
         for ter_element in terg_element.findall('./h:ter', ns):
 
             # Kui termin sisaldab [], siis tuleb teha mitu keelendit
             if '[' in ter_element.text and '?' not in ter_element.text:
-                print('termin 1: ' + ter_element.text)
+                # Eemaldada nurksulud ja lisada too pikem termin
                 words.append(data_classes.Word(
                     valuePrese=ter_element.text.replace('[', '').replace(']', ''),
                     lang='est',
@@ -27,16 +33,17 @@ def ter_word(sources_with_ids, a_element, ns):
                     lexemeNotes=[],
                     lexemeSourceLinks=[]
                 ))
-            else:
-                print('termin: ' + ter_element.text)
 
-
+            # Eemaldada nurksulud ja nende vahel olev, et lisada lühem termin
             value = re.sub(r'\[.*?\]', '', ter_element.text)
 
             # Vaste liik
             liik = ter_element.attrib.get(f'{{{ns["h"]}}}liik', '')
+
             if liik:
                 if liik == 'l':
+                    wordtypecodes.append(liik)
+                elif liik == 'z':
                     wordtypecodes.append(liik)
 
             # Vaste tüüp
@@ -47,8 +54,8 @@ def ter_word(sources_with_ids, a_element, ns):
                 else:
                     valuestatecode = None
 
+        # Stiil
         for s in terg_element.findall('./h:s', ns):
-
             if s.text == 'halb':
                 valuestatecode = 'väldi'
             elif s.text == 'van':
@@ -65,6 +72,7 @@ def ter_word(sources_with_ids, a_element, ns):
             else:
                 break
 
+        # Etümoloogia - läheb märkuseks, sest Ekilexis tuleb Udo etümoloogiast
         for e in terg_element.findall('./h:etym', ns):
             lexemenote = data_classes.Lexemenote(
                 value='Lähtekeel: ' + e.text,
@@ -74,7 +82,7 @@ def ter_word(sources_with_ids, a_element, ns):
             )
             lexemenotes.append(lexemenote)
 
-        # Eestikeelse termini allikaviide
+        # Termini allikaviited
         for all_element in terg_element.findall('./h:all', ns):
             source_value = all_element.text
             if sources_helpers.get_source_id_and_name_by_source_text(sources_with_ids, source_value):
@@ -88,7 +96,6 @@ def ter_word(sources_with_ids, a_element, ns):
 
             else:
                 print('Puuduv allikas: ' + source_value)
-
 
         word = data_classes.Word(valuePrese=value,
                                  lang=lang,
