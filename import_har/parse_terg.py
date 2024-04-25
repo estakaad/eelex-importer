@@ -1,3 +1,5 @@
+# EESTIKEELSED TERMINID JA MÕISTE MÄRKUSED
+
 import data_classes
 import sources_helpers
 import xml_helpers
@@ -59,7 +61,7 @@ def ter_word(sources_with_ids, a_element, ns):
             if s.text == 'halb':
                 valuestatecode = 'väldi'
             elif s.text == 'van':
-                valuestatecode = 'vananenud'
+                valuestatecode = 'endine'
             elif s.text == 'kõnek':
                 break
             elif s.text == 'aj':
@@ -72,10 +74,10 @@ def ter_word(sources_with_ids, a_element, ns):
             else:
                 break
 
-        # Etümoloogia - läheb märkuseks, sest Ekilexis tuleb Udo etümoloogiast
+        # Etümoloogia - läheb märkuseks
         for e in terg_element.findall('./h:etym', ns):
             lexemenote = data_classes.Lexemenote(
-                value='Lähtekeel: ' + e.text,
+                value='Lähtekeel: ' + xml_helpers.map_lang_codes_to_names(e.text),
                 lang='est',
                 publicity=True,
                 sourceLinks=[]
@@ -86,14 +88,12 @@ def ter_word(sources_with_ids, a_element, ns):
         for all_element in terg_element.findall('./h:all', ns):
             source_value = all_element.text
             if sources_helpers.get_source_id_and_name_by_source_text(sources_with_ids, source_value):
-                s_id, s_name = sources_helpers.get_source_id_and_name_by_source_text(sources_with_ids, source_value)
-
+                s_id, s_name, s_inner = sources_helpers.get_source_id_and_name_by_source_text(sources_with_ids, source_value)
                 sourcelink = data_classes.Sourcelink(
                     sourceId=s_id,
                     value=s_name,
-                    name='')
+                    name=s_inner)
                 sourcelinks.append(sourcelink)
-
             else:
                 print('Puuduv allikas: ' + source_value)
 

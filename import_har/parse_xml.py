@@ -1,3 +1,5 @@
+from datetime import datetime
+import json
 from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 import data_classes
@@ -60,9 +62,8 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         # Koostamisaeg - createdAt
         for created_at in a_element.findall('.//h:KA', ns):
             firstCreateEventOn = created_at.text
-            date_part = firstCreateEventOn.split("T")[0]
-            parts = date_part.split("-")
-            firstCreateEventOn = f"{parts[2]}.{parts[1]}.{parts[0]}"
+            dt = datetime.strptime(firstCreateEventOn, "%Y-%m-%dT%H:%M:%S")
+            firstCreateEventOn = dt.strftime("%d.%m.%Y %H:%M")
 
         # Koostaja - creator
         for creator in a_element.findall('.//h:K', ns):
@@ -151,8 +152,40 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         )
         concepts.append(concept)
 
-    with open('seosed.txt', 'w') as file:
-        for item in all_relations:
-            file.write(str(item) + '\n')
+    relations_list_json = []
+
+    for item in all_relations:
+        parts = item.strip().split('; ')
+
+        if parts[1] == 'seotud':
+            relationTypeCode = 'seotud mõiste'
+            oppositeRelationTypeCode = 'seotud mõiste'
+
+            json_object = {
+                "meaningId": parts[0],
+                "targetMeaningId": parts[2],
+                "relationTypeCode": relationTypeCode,
+                "oppositeRelationTypeCode": oppositeRelationTypeCode
+            }
+
+            relations_list_json.append(json_object)
+        elif parts[1] == 'antonüüm':
+            relationTypeCode = 'antonüüm'
+            oppositeRelationTypeCode = 'antonüüm'
+
+            json_object = {
+                "meaningId": parts[0],
+                "targetMeaningId": parts[2],
+                "relationTypeCode": relationTypeCode,
+                "oppositeRelationTypeCode": oppositeRelationTypeCode
+            }
+
+            relations_list_json.append(json_object)
+        else:
+            print('error - vigane seos - ' + item)
+            continue
+
+    with open('seosed.json', 'w', encoding='utf-8') as json_file:
+        json.dump(relations_list_json, json_file, ensure_ascii=False, indent=4)
 
     return concepts
