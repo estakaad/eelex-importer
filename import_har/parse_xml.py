@@ -63,7 +63,7 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         for created_at in a_element.findall('.//h:KA', ns):
             firstCreateEventOn = created_at.text
             dt = datetime.strptime(firstCreateEventOn, "%Y-%m-%dT%H:%M:%S")
-            firstCreateEventOn = dt.strftime("%d.%m.%Y %H:%M")
+            firstCreateEventOn = dt.strftime("%d.%m.%Y")
 
         # Koostaja - creator
         for creator in a_element.findall('.//h:K', ns):
@@ -136,6 +136,7 @@ def parse_xml(dataset_code, file_path, sources_file_path):
         for s in sources_from_xp:
             sources.append(s)
 
+
         # Koosta mõiste objekt
         concept = data_classes.Concept(
             datasetCode=dataset_code,
@@ -150,6 +151,29 @@ def parse_xml(dataset_code, file_path, sources_file_path):
             forums=forums,
             words=words
         )
+
+        if not a_element.findall('.//h:KL', ns):
+            for n in concept.notes:
+                n.publicity = False
+            for w in concept.words:
+                w.lexemePublicity = False
+                for ln in w.lexemeNotes:
+                    ln.publicity = False
+                for u in w.usages:
+                    u.publicity = False
+
+        # HTML märgendus
+        for d in concept.definitions:
+            d.value = d.value.replace('&ema;','<eki-foreign>').replace('&eml;','</eki-foreign>')
+        for n in concept.notes:
+            n.value = n.value.replace('&ema;','<eki-foreign>').replace('&eml;','</eki-foreign>')
+        for w in concept.words:
+            w.valuePrese = w.valuePrese.replace('&ema;','<eki-foreign>').replace('&eml;','</eki-foreign>')
+            for ln in w.lexemeNotes:
+                ln.value = ln.value.replace('&ema;','<eki-foreign>').replace('&eml;','</eki-foreign>')
+            for u in w.usages:
+                u.value = u.value.replace('&ema;','<eki-foreign>').replace('&eml;','</eki-foreign>')
+
         concepts.append(concept)
 
     relations_list_json = []

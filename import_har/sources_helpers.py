@@ -38,6 +38,7 @@ def load_sources(path):
 
 # Otsib allika ID ja lühikese kuju XMLis oleva pika kuju järgi
 def get_source_id_and_name_by_source_text(data, source_text):
+
     if 'Veldi' in source_text:
         source_text = 'Veldi'
 
@@ -49,11 +50,20 @@ def get_source_id_and_name_by_source_text(data, source_text):
         inner_link = 'lk ' + parts[1]
 
     for entry in data:
-        if entry.get('valuePrese') == source_text:
-            return entry.get('id'), entry.get('name'), inner_link
+        if entry.get('value') == source_text:
+            if source_text == 'Ekspert':
+                return 64797, 'Ekspert', ''
+            else:
+                return entry.get('id'), entry.get('name'), inner_link
         else:
             continue
+
+    for entry in data:
+        if source_text in entry.get('valuePrese'):
+            if entry.get('name') == 'Ekspert':
+                return entry.get('id'), entry.get('name'), inner_link
 
     print('Ei leidnud allikat: ' + source_text)
 
     return 0, 'unknown', inner_link
+
