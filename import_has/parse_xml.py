@@ -1,21 +1,25 @@
+# CONCEPT
+
 from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 import data_classes
 import xml_helpers
 from datetime import datetime
-
+import ter_word_parse
+import xp_parse
+import tg_parse
 
 ns = {
     'x': 'http://www.eki.ee/dict/has',
     'xml': 'http://www.w3.org/XML/1998/namespace'
 }
 
-# Function to parse XML and create Concept objects
 def parse_xml(file_path, sources_with_ids):
     tree = ET.parse(file_path)
     root = tree.getroot()
 
     concepts = []
+    relations_with_one_guid = []
 
     for a_element in root.findall('.//x:A', ns):
         if a_element.attrib.get(f'{{{ns["x"]}}}as', '') == 'elx':
@@ -42,11 +46,14 @@ def parse_xml(file_path, sources_with_ids):
                 }
                 domains.append(domain)
 
+            # GUID
+            for guid in a_element.findall('.//x:G', ns):
+                conceptids.append(guid.text)
+
             # Koostamise algus
             for ka in a_element.findall('.//x:KA', ns):
-                print(ka.text)
                 dt = datetime.strptime(ka.text, "%Y-%m-%dT%H:%M:%S")
-                firstCreateEventOn = dt.strftime("%d.%m.%Y")
+                firstCreateEventOn = dt.strftime("%d.%m.%Y %H:%M")
 
             # Toimetaja
             for editor in a_element.findall('.//x:T', ns):
@@ -62,8 +69,9 @@ def parse_xml(file_path, sources_with_ids):
                     sourceLinks=[]
                 ))
 
+            # Definitsioonid, märkused, sisemärkused
             for tg_element in a_element.findall('.//x:tg', ns):
-                definition, notes_from_xml, forums_from_xml = tg_def_definition(tg_element, sources_with_ids)
+                definition, notes_from_xml, forums_from_xml, relations_without_guids = tg_parse.tg_def_definition(tg_element, sources_with_ids)
 
                 if definition:
                     definitions.append(definition)
@@ -75,8 +83,12 @@ def parse_xml(file_path, sources_with_ids):
                     if forum.value:
                         forums.append(forum)
 
-            # Kommentaarid (sisemärkusteks)
+                modified_relations = [conceptids[0] + '; ' + r for r in relations_without_guids]
 
+                for m in modified_relations:
+                    relations_with_one_guid.append(m)
+
+            # Kommentaarid (sisemärkusteks)
             for kom_group_element in a_element.findall('.//x:komg', ns):
                 for kom_elem in kom_group_element.findall('.//x:kom', ns):
                     content = kom_elem.text
@@ -84,18 +96,18 @@ def parse_xml(file_path, sources_with_ids):
                     author = kom_aut_elem.text
 
                 forum_item = data_classes.Forum(
-                    value=content.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>').replace('&ba;', '<eki-highlight>').replace('&bl;', '</eki-highlight>') + ' (' + author + ')'
+                    value=content.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>').
+                          replace('&ba;', '<eki-highlight>').replace('&bl;', '</eki-highlight>') + ' (' + author + ')'
                 )
 
                 forums.append(forum_item)
 
             # Eestikeelsed terminid
-            for w in ter_word(a_element):
+            for w in ter_word_parse.ter_word(a_element, sources_with_ids):
                 words.append(w)
 
-            # Võõrkeelsed vasted
-
-            foreign_words, foreign_definitions = xp_to_words(a_element, sources_with_ids)
+            # Võõrkeelsed terminid
+            foreign_words, foreign_definitions = xp_parse.xp_to_words(a_element, sources_with_ids)
 
             for w in foreign_words:
                 if w.valuePrese:
@@ -105,9 +117,9 @@ def parse_xml(file_path, sources_with_ids):
                 if d.value:
                     definitions.append(d)
 
-            # Koosta mõiste objekt
+
             concept = data_classes.Concept(
-                datasetCode='has-07-12',
+                datasetCode='has-02-05',
                 conceptIds=conceptids,
                 domains=domains,
                 manualEventOn=manualEventOn,
@@ -119,386 +131,8 @@ def parse_xml(file_path, sources_with_ids):
                 forums=forums,
                 words=words
             )
+
             concepts.append(concept)
 
-    return concepts
+    return concepts, relations_with_one_guid
 
-
-# Mõiste tähendusgrupp: tg : def - Definitsiooniks jmt
-def tg_def_definition(tg_element, sources_with_ids):
-    def_value = None
-    definition = None
-    notes = []
-    sourcelinks = []
-    forums = []
-
-    for dg_element in tg_element.findall('./x:dg', ns):
-        for def_element in dg_element.findall('./x:def', ns):
-            def_value = def_element.text
-        for all_element in dg_element.findall('./x:all', ns):
-            source_value = all_element.text
-            s_id, s_value, s_inner = xml_helpers.get_source_id_and_name_by_source_text(sources_with_ids, source_value)
-            sourcelink = data_classes.Sourcelink(
-                sourceId=s_id,
-                value=s_value,
-                name=s_inner)
-            sourcelinks.append(sourcelink)
-        for lisa_element in dg_element.findall('./x:lisa', ns):
-            lisa_value = lisa_element.text
-            notes.append(data_classes.Note(
-                value=lisa_value,
-                lang='est',
-                publicity=True,
-                sourceLinks=sourcelinks
-            ))
-        for ng_element in dg_element.findall('./x:ng', ns):
-            for nall_element in ng_element.findall('./x:nall', ns):
-                s_id, s_value, s_inner = xml_helpers.get_source_id_and_name_by_source_text(sources_with_ids, nall_element.text)
-                sourcelink = data_classes.Sourcelink(
-                    sourceId=s_id,
-                    value=s_value,
-                    name=s_inner
-                )
-            for n_element in ng_element.findall('./x:n', ns):
-
-                n_value = n_element.text
-
-                notes.append(data_classes.Note(
-                    value=n_value,
-                    lang='est',
-                    publicity=True,
-                    sourceLinks=[sourcelink] if sourcelinks else []
-                ))
-        for dn_element in dg_element.findall('./x:dn', ns):
-            notes.append(data_classes.Note(
-                value=dn_element.text.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>'),
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            ))
-
-    for co_element in tg_element.findall('./x:co', ns):
-        note_value = co_element.text.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
-        notes.append(data_classes.Note(
-            value=note_value,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        ))
-
-    # Tesaurus
-    for tes_element in tg_element.findall('./x:tes', ns):
-        for child in tes_element:
-            tag_name = child.tag.split('}')[-1]
-
-            child_text = child.text if child.text is not None else ""
-
-            notes.append(data_classes.Note(
-                value=tag_name + ": " + child_text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            ))
-
-    # Edasiviited
-    evts_vrd = []
-    evts_vt_ka = []
-
-    for evt_element in tg_element.findall('./x:evt', ns):
-        evt_value = evt_element.text if evt_element.text is not None else ""
-        evt_attrib_value = evt_element.attrib.get(f'{{{ns["x"]}}}evtl', '')
-
-        if evt_attrib_value == "vrd":
-            if evt_value:
-                evts_vrd.append(evt_value)
-        elif evt_attrib_value == "vt ka":
-            if evt_value:
-                evts_vt_ka.append(evt_value)
-
-    if evts_vrd:
-        combined_evts_vrd = ', '.join(evts_vrd)
-        notes_value_vrd = f"Vrd: {combined_evts_vrd}"
-
-        note_vrd = data_classes.Note(
-            value=notes_value_vrd,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vrd)
-
-    if evts_vt_ka:
-        combined_evts_vt_ka = ', '.join(evts_vt_ka)
-        notes_value_vt_ka = f"Vt ka: {combined_evts_vt_ka}"
-
-        note_vt_ka = data_classes.Note(
-            value=notes_value_vt_ka,
-            lang='est',
-            publicity=True,
-            sourceLinks=[]
-        )
-        notes.append(note_vt_ka)
-
-    # Sisemärkus
-    forum = None
-    for mrk_element in tg_element.findall('./x:mrk', ns):
-        mrk_maut_value = mrk_element.attrib.get(f'{{{ns["x"]}}}maut', '')
-        mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["x"]}}}maeg', '')
-        forum_value = mrk_element.text
-        forum = data_classes.Forum(
-            value=forum_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')'
-        )
-
-    if forum is not None:
-        forums.append(forum)
-
-    if def_value:
-        def_value = def_value.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
-
-        definition = data_classes.Definition(
-            value=def_value,
-            lang='est',
-            definitionTypeCode='definitsioon',
-            sourceLinks=[])
-
-    return definition, notes, forums
-
-# Vastete plokk
-def xp_to_words(a_element, sources_with_ids):
-    words = []
-    sourcelinks = []
-    wordtypecodes = []
-    valuestatecode = None
-    lexemevalue = None
-    definitions = []
-
-    for xp_element in a_element.findall('.//x:xp', ns):
-        lang = xp_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'et')
-        # Vaste keel
-
-        for xg_element in xp_element.findall('./x:xg', ns):
-            lexemenotes = []
-            word_sourcelinks = []
-
-
-            # Märkus
-            for co_element in xg_element.findall('./x:co', ns):
-                co_lang = co_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'et')
-
-                lnote_value = co_element.text.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
-
-                if co_element.text:
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value=lnote_value,
-                        lang=xml_helpers.map_lang_codes(co_lang),
-                        publicity=True,
-                        sourceLinks=None
-                    ))
-
-            # Vaste
-            for x_element in xg_element.findall('./x:x', ns):
-                lexemevalue = x_element.text.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
-
-                # Vaste liik
-                liik = x_element.attrib.get(f'{{{ns["x"]}}}liik', '')
-                if liik:
-                    if liik == 'l':
-                        wordtypecodes.append(liik)
-
-                # Vaste tüüp
-                tyyp = x_element.attrib.get(f'{{{ns["x"]}}}tyyp', '')
-                if tyyp:
-                    if tyyp == 'ee':
-                        valuestatecode = 'eelistatud'
-                    else:
-                        valuestatecode = None
-
-            # Stiil
-            for s_element in xg_element.findall('./x:s', ns):
-                if s_element.text:
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Stiil: ' + s_element.text,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-
-
-            # Sisemärkus (mitteavalik ilmiku märkus)
-            for mrk_element in xg_element.findall('./x:mrk', ns):
-                mrk_lang_value = mrk_element.attrib.get('{http://www.w3.org/XML/1998/namespace}lang', 'et')
-                mrk_maut_value = mrk_element.attrib.get(f'{{{ns["x"]}}}maut', '')
-                mrk_maeg_value = mrk_element.attrib.get(f'{{{ns["x"]}}}maeg', '')
-
-                mrk_value = mrk_element.text
-
-                if mrk_value.startswith('['):
-                        s_id, s_value, s_inner = xml_helpers.get_source_id_and_name_by_source_text(sources_with_ids, mrk_value.strip('[]'))
-                        word_sourcelinks.append(data_classes.Sourcelink(
-                            sourceId=s_id,
-                            value=s_value,
-                            name=s_inner
-                        ))
-                else:
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value=mrk_value + ' (' + mrk_maut_value + ', ' + mrk_maeg_value + ')',
-                        lang=xml_helpers.map_lang_codes(mrk_lang_value),
-                        publicity=False,
-                        sourceLinks=[]
-                    ))
-
-            # Grammatika grupp
-            for xgrg_element in xg_element.findall('./x:xgrg', ns):
-                # Aspektipaarik
-                for xa_element in xgrg_element.findall('./x:xa', ns):
-                    xa = xa_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Aspektipaarik: ' + xa,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-                # Vormikood
-                for xvk_element in xgrg_element.findall('./x:xvk', ns):
-                    xvl = xvk_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Vormikood: ' + xvl,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-                # Sõnaliik
-                for xsl_element in xgrg_element.findall('./x:xsl', ns):
-                    xsl = xsl_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Sõnaliik: ' + xsl,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-                # Gr sugu (sks)
-                for xzde_element in xgrg_element.findall('./x:xzde', ns):
-                    xzde = xzde_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Grammatiline sugu: ' + xzde,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-                # Gr sugu (vene)
-                for xzru_element in xgrg_element.findall('./x:xzru', ns):
-                    xzru = xzru_element.text
-                    lexemenotes.append(data_classes.Lexemenote(
-                        value='Grammatiline sugu: ' + xzru,
-                        lang=xml_helpers.map_lang_codes(lang),
-                        publicity=True,
-                        sourceLinks=sourcelinks
-                    ))
-
-            # Allikas
-            for all_element in xg_element.findall('./x:all', ns):
-                if all_element.text:
-                    word_sourcelinks.append(data_classes.Sourcelink(
-                        sourceId=1,
-                        value=all_element.text,
-                        name=''
-                    ))
-
-            words.append(data_classes.Word(
-                valuePrese=lexemevalue,
-                lang=xml_helpers.map_lang_codes(lang),
-                lexemePublicity=True,
-                lexemeValueStateCode=valuestatecode,
-                wordTypeCodes=wordtypecodes,
-                lexemeNotes=lexemenotes,
-                lexemeSourceLinks=word_sourcelinks
-            ))
-
-    return words, definitions
-
-
-
-def ter_word(a_element):
-    words = []
-    for terg_element in a_element.findall('.//x:terg', ns):
-        ekeel_value = ''
-        ex_value = ''
-        ek_value = ''
-        ed_value = ''
-        etvk_value = ''
-        valuestatecode = None
-        sourcelinks = []
-        lexemenotes = []
-        wordtypecodes = []
-
-        etym_element = terg_element.find('.//x:etym', ns)
-        etym_text = etym_element.text if etym_element is not None else None
-
-        for ter_element in terg_element.findall('./x:ter', ns):
-            value = ter_element.text.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>')
-            liik = ter_element.attrib.get(f'{{{ns["x"]}}}liik', '')
-
-            # Process wordtypecode
-            if liik and liik == 'z':
-                lang = 'est'  # Set language to Estonian for wordtypecode 'z'
-            else:
-                lang = 'est'  # Default to Estonian if wordtypecode is not 'z'
-
-            if etym_text:
-                # Add Lexemenote for Päritolu if etymology is present
-                lexemenotes.append(data_classes.Lexemenote(
-                    value='Päritolu: ' + etym_text,
-                    lang='est',
-                    publicity=True,
-                    sourceLinks=[]
-                ))
-
-
-        for ter_element in terg_element.findall('./x:ter', ns):
-            value = ter_element.text
-
-            # Vaste tüüp
-            tyyp = ter_element.attrib.get(f'{{{ns["x"]}}}tyyp', '')
-            if tyyp:
-                if tyyp == 'ee':
-                    valuestatecode = 'eelistatud'
-                else:
-                    valuestatecode = None
-
-            etymology_values = [value for value in [ekeel_value, ex_value, ek_value, ed_value, etvk_value] if value]
-            etymology_string = ', '.join(etymology_values)
-
-            if etymology_values:
-                lexemenote = data_classes.Lexemenote(
-                    value='Etümoloogia: ' + etymology_string,
-                    lang='est',
-                    publicity=True,
-                    sourceLinks=[]
-                )
-                lexemenotes.append(lexemenote)
-
-        for h in terg_element.findall('./x:hld', ns):
-            lexemenote = data_classes.Lexemenote(
-                value='Hääldus: ' + h.text,
-                lang='est',
-                publicity=True,
-                sourceLinks=[]
-            )
-            lexemenotes.append(lexemenote)
-
-        # Eestikeelse termini allikaviide
-        for all_element in terg_element.findall('./x:all', ns):
-            source_value = all_element.text
-            sourcelink = data_classes.Sourcelink(sourceId=121611, value=source_value, name='')
-            sourcelinks.append(sourcelink)
-
-        word = data_classes.Word(valuePrese=value.replace('&ema;', '<eki-foreign>').replace('&eml;', '</eki-foreign>'),
-                                 lang=lang,
-                                 lexemePublicity=True,
-                                 lexemeValueStateCode=valuestatecode,
-                                 wordTypeCodes=wordtypecodes,
-                                 lexemeNotes=lexemenotes,
-                                 lexemeSourceLinks=sourcelinks)
-        words.append(word)
-
-    return words

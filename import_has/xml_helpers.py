@@ -66,10 +66,52 @@ def get_source_id_and_name_by_source_text(data, source_text):
 
     for entry in data:
         if entry.get('value') == source_text:
-            return entry.get('test_id'), entry.get('name'), inner_link
+            return entry.get('test_id'), entry.get('name'), entry.get('siseviide')
         else:
             continue
 
     print('Ei leidnud allikat: ' + source_text)
 
     return 0, 'unknown', inner_link
+
+
+def get_second_guid_by_term(relations, concepts):
+
+    relations_with_guids = []
+
+    for r in relations:
+        parts = r.split(';')
+        term = parts[-1].strip()
+        meaning_id = parts[0]
+        relation_type = parts[1]
+
+        for c in concepts:
+            for w in c.words:
+                if w.valuePrese == term:
+                    relation_object = {
+                        "meaningId": meaning_id,
+                        "targetMeaningId": c.conceptIds[0],
+                        "relationTypeCode": relation_type,
+                        "oppositeRelationTypeCode": relation_type
+                    }
+                    relations_with_guids.append(relation_object)
+
+    return relations_with_guids
+
+
+def replace_guids_with_meaning_ids(json_with_guids, json_with_mappings_path, output_path):
+
+    with open(json_with_mappings_path, 'r', encoding='utf-8') as file:
+        mappings = json.load(file)
+
+    guid_to_id_map = {item["conceptIds"][0]: item["id"] for item in mappings}
+
+    for item in json_with_guids:
+        if item["meaningId"] in guid_to_id_map:
+            item["meaningId"] = guid_to_id_map[item["meaningId"]]
+
+        if item["targetMeaningId"] in guid_to_id_map:
+            item["targetMeaningId"] = guid_to_id_map[item["targetMeaningId"]]
+
+    with open(output_path, 'w', encoding='utf-8') as file:
+        json.dump(json_with_guids, file, ensure_ascii=False, indent=4)
