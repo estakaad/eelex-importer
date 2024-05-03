@@ -106,14 +106,17 @@ def ter_word(a_element, sources_with_ids):
                                  lexemeSourceLinks=sourcelinks)
         words.append(word)
 
-    count_eelistatud = 0
-    count_ee = len(words)
-
-    for w in words:
-        if w.lexemeValueStateCode == 'eelistatud':
-            count_eelistatud += 1
-
-    if count_eelistatud > 1:
+    if len(words) == 1 and words[0].lexemeValueStateCode == 'eelistatud':
         print(words)
+        words[0].lexemeValueStateCode = None
+    else:
+        first_found = False
+
+        for w in words:
+            if w.lexemeValueStateCode == 'eelistatud':
+                if not first_found:
+                    first_found = True
+                else:
+                    w.lexemeValueStateCode = None
 
     return words
